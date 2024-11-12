@@ -1,0 +1,14 @@
+{
+    "manifest_version": 3,
+    "name": "Simple Browser Notepad",
+    "description": "A notepad that opens in a new tab.",
+    "version": "1.0",
+    "action": {
+      "default_title": "Open Notepad"
+    },
+    "permissions": ["storage", "tabs"],
+    "background": {
+      "service_worker": "background.js"
+    }
+  }
+  

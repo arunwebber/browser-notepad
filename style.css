@@ -1,0 +1,101 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  
+  #header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  #title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  #fontControls {
+    display: flex;
+    gap: 10px;
+  }
+  
+  button {
+    padding: 5px 10px;
+    font-size: 18px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    background-color: #007bff;
+    border-radius: 4px;
+  }
+  
+  button:hover {
+    background-color: #0056b3;
+  }
+  
+  #container {
+    display: flex;
+    width: 100%;
+    height: calc(100% - 100px); /* Adjust height to account for both header and footer */
+  }
+  
+  #lineNumbers {
+    width: 50px; /* Fixed width for the line numbers */
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-right: 1px solid #ddd;
+    font-family: monospace;
+    font-size: 16px;
+    text-align: right;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    height: 100%;
+    overflow-y: auto;
+    line-height: 1.6; /* Match the line-height to note area */
+    display: inline-block;
+  }
+  
+  #textAreaWrapper {
+    flex-grow: 1;
+    display: flex;
+    padding: 10px;
+  }
+  
+  #note {
+    flex-grow: 1;
+    width: 100%;
+    font-size: 16px; /* Match font size with line numbers */
+    font-family: Arial, sans-serif;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    height: 100%;
+    overflow-y: auto;
+    outline: none;
+    display: inline-block; /* Ensures both are on the same line */
+    line-height: 1.6; /* Ensures text height matches the line height */
+  }
+  
+  #note:empty:before {
+    content: attr(placeholder);
+    color: #aaa;
+  }
+  
+  #footer {
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-top: 1px solid #ddd;
+    text-align: center;
+    font-size: 14px;
+    color: #333;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+  }
+  

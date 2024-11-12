@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Browser Notepad</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header Section -->
+  <div id="header">
+    <div id="title">Simple Browser Notepad</div>
+    <div id="fontControls">
+      <button id="increaseFont">+</button>
+      <button id="decreaseFont">-</button>
+    </div>
+  </div>
+
+  <!-- Main Content Section -->
+  <div id="container">
+    <!-- Line numbers container (on the left side) -->
+    <div id="lineNumbers"></div>
+
+    <!-- Editable text area -->
+    <div id="textAreaWrapper">
+      <div id="note" contenteditable="true" placeholder="Type your notes here..."></div>
+    </div>
+  </div>
+
+  <!-- Footer Section -->
+  <div id="footer">
+    hashPalLabs - Tech Division of arunsyoga.in
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
