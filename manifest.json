@@ -1,26 +1,24 @@
 {
-    "manifest_version": 3,
-    "name": "Simple Browser Notepad",
-    "description": "A notepad that opens in a new tab.",
-    "version": "1.0",
-    "action": {
-      "default_title": "Simple Browser Notepad",
-      "default_icon": {
-        "16": "images/icon_16.png",
-        "48": "images/icon_48.png",
-        "128": "images/icon_128.png"
-      }
-    },
-    "permissions": ["tabs"],
-    "background": {
-      "service_worker": "background.js"
-    },
-    "icons": {
-        "16": "images/icon_16.png",
-        "48": "images/icon_48.png",
-        "128": "images/icon_128.png"
-    },
-  "homepage_url": "https://www.arunsyoga.in", 
+  "manifest_version": 3,
+  "name": "Simple Browser Notepad",
+  "description": "A notepad that opens in a new tab.",
+  "version": "1.0",
+  "action": {
+    "default_title": "Simple Browser Notepad",
+    "default_icon": {
+      "16": "images/icon_16.png",
+      "48": "images/icon_48.png",
+      "128": "images/icon_128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+      "16": "images/icon_16.png",
+      "48": "images/icon_48.png",
+      "128": "images/icon_128.png"
+  },
+  "homepage_url": "https://www.arunsyoga.in",
   "author": "HashPalLabs"
-  }
-  
+}
