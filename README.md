@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/arunwebber/browser-notepad/refs/heads/main/images/icon_128.png" alt="Browser Notepad Icon" width="128" height="128">
+</p>
+
 # Simple Browser Notepad
 
 A lightweight and simple notepad built with HTML, CSS, and JavaScript that runs directly in your browser. It allows you to create, edit, and save notes, with basic controls to adjust font size, track cursor position, and display line numbers.
