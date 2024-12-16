@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Simple Browser Notepad",
   "description": "A notepad that opens in a new tab.",
-  "version": "1.1",
+  "version": "2.0",
   "action": {
     "default_title": "Simple Browser Notepad",
     "default_icon": {
