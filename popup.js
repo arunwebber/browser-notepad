@@ -6,6 +6,10 @@ const decreaseFontBtn = document.getElementById('decreaseFont');
 let increaseInterval;
 let decreaseInterval;
 
+// History stacks for undo and redo
+let undoStack = [];
+let redoStack = [];
+
 // Load saved note and font size when the page loads
 window.onload = () => {
   noteArea.innerText = localStorage.getItem('savedNote') || '';
@@ -17,6 +21,7 @@ window.onload = () => {
 
 // Save note content on every input
 noteArea.addEventListener('input', () => {
+  saveState(); // Save the current state for undo
   localStorage.setItem('savedNote', noteArea.innerText);
   updateLineNumbers(); // Update line numbers on each input
 });
@@ -81,4 +86,82 @@ increaseFontBtn.addEventListener('mouseleave', () => {
 
 decreaseFontBtn.addEventListener('mouseleave', () => {
   clearInterval(decreaseInterval);
+});
+
+// Ensure that pasted content is sanitized to only plain text
+noteArea.addEventListener('paste', (event) => {
+  event.preventDefault(); // Prevent the default paste behavior
+
+  // Get plain text from the clipboard
+  const plainText = (event.clipboardData || window.clipboardData).getData('text');
+
+  // Insert plain text into the current caret position
+  const selection = window.getSelection();
+  const range = selection.getRangeAt(0);
+  range.deleteContents(); // Remove any selected content
+  range.insertNode(document.createTextNode(plainText));
+
+  // Save the new state after paste
+  saveState();
+  localStorage.setItem('savedNote', noteArea.innerText);
+
+  // Update line numbers
+  updateLineNumbers();
+});
+
+// Prevent any rich formatting from being pasted
+noteArea.addEventListener('drop', (event) => {
+  event.preventDefault();
+  const plainText = event.dataTransfer.getData('text');
+  noteArea.innerText += plainText; // Append the plain text
+
+  // Save the new state after drop
+  saveState();
+  localStorage.setItem('savedNote', noteArea.innerText);
+  updateLineNumbers();
+});
+
+// Save current state to undo stack
+function saveState() {
+  undoStack.push(noteArea.innerText); // Save current state to undo stack
+  if (undoStack.length > 50) {
+    undoStack.shift(); // Keep the stack size manageable
+  }
+  redoStack = []; // Clear redo stack after a new action
+}
+
+// Undo the last action
+function undo() {
+  if (undoStack.length > 0) {
+    const lastState = undoStack.pop();
+    redoStack.push(noteArea.innerText); // Save current state to redo stack
+    noteArea.innerText = lastState;
+    localStorage.setItem('savedNote', noteArea.innerText);
+    updateLineNumbers();
+  }
+}
+
+// Redo the last undone action
+function redo() {
+  if (redoStack.length > 0) {
+    const lastState = redoStack.pop();
+    undoStack.push(noteArea.innerText); // Save current state to undo stack
+    noteArea.innerText = lastState;
+    localStorage.setItem('savedNote', noteArea.innerText);
+    updateLineNumbers();
+  }
+}
+
+// Keyboard shortcuts for undo (Ctrl+Z) and redo (Ctrl+Y)
+document.addEventListener('keydown', (event) => {
+  // Check if Ctrl key is pressed
+  if (event.ctrlKey) {
+    if (event.key === 'z' || event.key === 'Z') {
+      event.preventDefault(); // Prevent default action (undo in browser)
+      undo();  // Perform undo action
+    } else if (event.key === 'y' || event.key === 'Y') {
+      event.preventDefault(); // Prevent default action (redo in browser)
+      redo();  // Perform redo action
+    }
+  }
 });
