@@ -1,4 +1,4 @@
-body {
+  body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
@@ -47,7 +47,7 @@ body {
   }
   
   #lineNumbers {
-    width: 50px; /* Fixed width for the line numbers */
+    width: 50px;
     padding: 10px;
     background-color: #f0f0f0;
     border-right: 1px solid #ddd;
@@ -57,8 +57,8 @@ body {
     white-space: pre-wrap;
     word-wrap: break-word;
     height: 100%;
-    overflow-y: auto;
-    line-height: 1.6; /* Match the line-height to note area */
+    overflow: hidden; /* Prevents its own scrollbar */
+    line-height: 1.6;
     display: inline-block;
   }
   
@@ -66,20 +66,21 @@ body {
     flex-grow: 1;
     display: flex;
     padding: 10px;
+    overflow: hidden; /* Prevents extra scrollbars */
   }
   
   #note {
     flex-grow: 1;
     width: 100%;
-    font-size: 16px; /* Match font size with line numbers */
+    font-size: 16px;
     font-family: Arial, sans-serif;
     white-space: pre-wrap;
     word-wrap: break-word;
     height: 100%;
-    overflow-y: auto;
+    overflow-y: auto; /* Only this should scroll */
     outline: none;
-    display: inline-block; /* Ensures both are on the same line */
-    line-height: 1.6; /* Ensures text height matches the line height */
+    display: inline-block;
+    line-height: 1.6;
   }
   
   #note:empty:before {

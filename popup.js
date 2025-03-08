@@ -107,8 +107,8 @@ class LintingManager {
 
   // Sync scrolling between the note area and line numbers
   syncScrolling() {
-    this.noteElement.addEventListener('scroll', () => {
-      this.lineNumbersElement.scrollTop = this.noteElement.scrollTop;
+    this.noteElement.addEventListener("scroll", () => {
+        this.lineNumbersElement.scrollTop = this.noteElement.scrollTop;
     });
   }
 }
@@ -217,6 +217,7 @@ class NoteApp {
 
     // Keyboard shortcuts for undo (Ctrl+Z) and redo (Ctrl+Y)
     document.addEventListener('keydown', (event) => this.keyboardShortcutManager.handleKeyboardShortcuts(event));
+    this.lintingManager.syncScrolling();
   }
 }
 
