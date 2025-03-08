@@ -170,12 +170,13 @@ class InputManager {
 
 // NoteApp Class: Manages the note and integrates all other managers
 class NoteApp {
-  constructor(noteElementId, lineNumbersElementId, increaseFontBtnId, decreaseFontBtnId, downloadBtnId) {
+  constructor(noteElementId, lineNumbersElementId, increaseFontBtnId, decreaseFontBtnId, downloadBtnId, printBtnId) {
     this.noteElement = document.getElementById(noteElementId);
     this.lineNumbersElement = document.getElementById(lineNumbersElementId);
     this.increaseFontBtn = document.getElementById(increaseFontBtnId);
     this.decreaseFontBtn = document.getElementById(decreaseFontBtnId);
     this.downloadBtn = document.getElementById(downloadBtnId);
+    this.printBtn = document.getElementById(printBtnId); // New Print Button
 
     // Create instances of other managers
     this.fontManager = new FontManager(this.noteElement, this.lineNumbersElement);
@@ -196,21 +197,20 @@ class NoteApp {
     const fontSize = StorageManager.getFromLocalStorage('fontSize', '16px');
     this.noteElement.style.fontSize = fontSize;
     this.lineNumbersElement.style.fontSize = fontSize;
-    this.lintingManager.updateLineNumbers(); // Update line numbers when the page loads
+    this.lintingManager.updateLineNumbers();
   }
 
   // Bind event listeners for actions
   bindEventListeners() {
-    const { noteElement, increaseFontBtn, decreaseFontBtn, downloadBtn } = this;
+    const { noteElement, increaseFontBtn, decreaseFontBtn, downloadBtn, printBtn } = this;
 
     // Note input actions
     noteElement.addEventListener('input', () => this.inputManager.handleInput());
     noteElement.addEventListener('paste', (event) => this.inputManager.handlePaste(event));
     noteElement.addEventListener('drop', (event) => this.inputManager.handleDrop(event));
-    noteElement.addEventListener('scroll', () => {this.lintingManager.lineNumbersElement.scrollTop = noteElement.scrollTop;});
-    
+    noteElement.addEventListener('scroll', () => { this.lintingManager.lineNumbersElement.scrollTop = noteElement.scrollTop; });
 
-    // Font size controls with fluid behavior
+    // Font size controls
     increaseFontBtn.addEventListener('mousedown', () => this.fontManager.startIncrease());
     decreaseFontBtn.addEventListener('mousedown', () => this.fontManager.startDecrease());
     increaseFontBtn.addEventListener('mouseup', this.fontManager.stopFontChange.bind(this.fontManager));
@@ -223,6 +223,9 @@ class NoteApp {
 
     // Download button event
     downloadBtn.addEventListener('click', () => this.downloadNote());
+
+    // Print button event
+    printBtn.addEventListener('click', () => this.printNote());
   }
 
   // Function to download the note as a .txt file
@@ -233,12 +236,20 @@ class NoteApp {
     a.href = URL.createObjectURL(blob);
     a.download = 'note.txt';
     a.click();
-    URL.revokeObjectURL(a.href); // Cleanup
+    URL.revokeObjectURL(a.href);
+  }
+
+  // Function to print the note
+  printNote() {
+    const printWindow = window.open('', '', 'width=600,height=600');
+    printWindow.document.write('<pre>' + this.noteElement.innerText + '</pre>');
+    printWindow.document.close();
+    printWindow.print();
   }
 }
 
-// Initialize the app by creating an instance of the NoteApp class
+// Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
-  const noteApp = new NoteApp('note', 'lineNumbers', 'increaseFont', 'decreaseFont', 'downloadBtn');
+  const noteApp = new NoteApp('note', 'lineNumbers', 'increaseFont', 'decreaseFont', 'downloadBtn', 'printBtn');
 });
 

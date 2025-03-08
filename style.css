@@ -99,8 +99,15 @@
     bottom: 0;
     width: 100%;
   }
+  
   #downloadBtn {
     position: absolute;
-    right: 60px; /* Moves button to the right */
+    right: 140px; /* Moves button further to the left */
     padding: 5px 20px;
+  }
+
+  #printBtn {
+      position: absolute;
+      right: 60px; /* Keeps this button closer to the right */
+      padding: 5px 20px;
   }
