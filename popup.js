@@ -107,8 +107,8 @@ class LintingManager {
 
   // Sync scrolling between the note area and line numbers
   syncScrolling() {
-    this.noteElement.addEventListener("scroll", () => {
-        this.lineNumbersElement.scrollTop = this.noteElement.scrollTop;
+    this.noteElement.addEventListener('scroll', () => {
+      this.lineNumbersElement.scrollTop = this.noteElement.scrollTop;
     });
   }
 }
@@ -170,11 +170,12 @@ class InputManager {
 
 // NoteApp Class: Manages the note and integrates all other managers
 class NoteApp {
-  constructor(noteElementId, lineNumbersElementId, increaseFontBtnId, decreaseFontBtnId) {
+  constructor(noteElementId, lineNumbersElementId, increaseFontBtnId, decreaseFontBtnId, downloadBtnId) {
     this.noteElement = document.getElementById(noteElementId);
     this.lineNumbersElement = document.getElementById(lineNumbersElementId);
     this.increaseFontBtn = document.getElementById(increaseFontBtnId);
     this.decreaseFontBtn = document.getElementById(decreaseFontBtnId);
+    this.downloadBtn = document.getElementById(downloadBtnId);
 
     // Create instances of other managers
     this.fontManager = new FontManager(this.noteElement, this.lineNumbersElement);
@@ -200,7 +201,7 @@ class NoteApp {
 
   // Bind event listeners for actions
   bindEventListeners() {
-    const { noteElement, increaseFontBtn, decreaseFontBtn } = this;
+    const { noteElement, increaseFontBtn, decreaseFontBtn, downloadBtn } = this;
 
     // Note input actions
     noteElement.addEventListener('input', () => this.inputManager.handleInput());
@@ -217,11 +218,25 @@ class NoteApp {
 
     // Keyboard shortcuts for undo (Ctrl+Z) and redo (Ctrl+Y)
     document.addEventListener('keydown', (event) => this.keyboardShortcutManager.handleKeyboardShortcuts(event));
-    this.lintingManager.syncScrolling();
+
+    // Download button event
+    downloadBtn.addEventListener('click', () => this.downloadNote());
+  }
+
+  // Function to download the note as a .txt file
+  downloadNote() {
+    const noteContent = this.noteElement.innerText;
+    const blob = new Blob([noteContent], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'note.txt';
+    a.click();
+    URL.revokeObjectURL(a.href); // Cleanup
   }
 }
 
 // Initialize the app by creating an instance of the NoteApp class
 document.addEventListener('DOMContentLoaded', () => {
-  const noteApp = new NoteApp('note', 'lineNumbers', 'increaseFont', 'decreaseFont');
+  const noteApp = new NoteApp('note', 'lineNumbers', 'increaseFont', 'decreaseFont', 'downloadBtn');
 });
+
