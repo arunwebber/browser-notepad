@@ -207,6 +207,8 @@ class NoteApp {
     noteElement.addEventListener('input', () => this.inputManager.handleInput());
     noteElement.addEventListener('paste', (event) => this.inputManager.handlePaste(event));
     noteElement.addEventListener('drop', (event) => this.inputManager.handleDrop(event));
+    noteElement.addEventListener('scroll', () => {this.lintingManager.lineNumbersElement.scrollTop = noteElement.scrollTop;});
+    
 
     // Font size controls with fluid behavior
     increaseFontBtn.addEventListener('mousedown', () => this.fontManager.startIncrease());
