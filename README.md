@@ -23,7 +23,7 @@ To try the browser notepad, open the `index.html` file in any modern web browser
 
 Since this is a browser-based application, there is no installation required.
 
-1. Clone or download this repository.
+1. Clone or download this repository  .
 2. Open the `index.html` file in your browser to start using the notepad.
 
 
