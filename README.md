@@ -23,7 +23,7 @@ To try the browser notepad, open the `index.html` file in any modern web browser
 
 Since this is a browser-based application, there is no installation required.
 
-1. Download the Extension:Clone this repository or download the ZIP.git clone git clone https://github.com/Krishnapriya462/browser-notepad.git
+1. Clone this repository 
 2. cd browser-notepad
 3. Load as an Unpacked Extension:
     * Open Chrome and go to chrome://extensions/
