@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Simple Browser Notepad",
   "description": "A notepad that opens in a new tab.",
-  "version": "2.1.1",
+  "version": "3.0.0",
   "action": {
     "default_title": "Simple Browser Notepad",
     "default_icon": {
@@ -19,6 +19,6 @@
       "48": "images/icon_48.png",
       "128": "images/icon_128.png"
   },
-  "homepage_url": "https://www.arunsyoga.in",
+  "homepage_url": "https://www.HashPalLabs.com",
   "author": "HashPalLabs"
 }
