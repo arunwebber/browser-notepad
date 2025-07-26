@@ -1,113 +1,194 @@
-  body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-  }
-  
-  #header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    background-color: #f0f0f0;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  #title {
-    font-size: 18px;
-    font-weight: bold;
-    color: #333;
-  }
-  
-  #fontControls {
-    display: flex;
-    gap: 10px;
-  }
-  
-  button {
-    padding: 5px 10px;
-    font-size: 18px;
-    cursor: pointer;
-    border: 1px solid #ddd;
-    background-color: #007bff;
-    border-radius: 4px;
-  }
-  
-  button:hover {
-    background-color: #0056b3;
-  }
-  
-  #container {
-    display: flex;
-    width: 100%;
-    height: calc(100% - 100px); /* Adjust height to account for both header and footer */
-  }
-  
-  #lineNumbers {
-    width: 50px;
-    padding: 10px;
-    background-color: #f0f0f0;
-    border-right: 1px solid #ddd;
-    font-family: monospace;
-    font-size: 16px;
-    text-align: right;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    height: 100%;
-    overflow: hidden; /* Prevents its own scrollbar */
-    line-height: 1.6;
-    display: inline-block;
-  }
-  
-  #textAreaWrapper {
-    flex-grow: 1;
-    display: flex;
-    padding: 10px;
-    overflow: hidden; /* Prevents extra scrollbars */
-  }
-  
-  #note {
-    flex-grow: 1;
-    width: 100%;
-    font-size: 16px;
-    font-family: Arial, sans-serif;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    height: 100%;
-    overflow-y: auto; /* Only this should scroll */
-    outline: none;
-    display: inline-block;
-    line-height: 1.6;
-  }
-  
-  #note:empty:before {
-    content: attr(placeholder);
-    color: #aaa;
-  }
-  
-  #footer {
-    padding: 25px;
-    background-color: #f0f0f0;
-    border-top: 1px solid #ddd;
-    text-align: center;
-    font-size: 14px;
-    color: #333;
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-  }
-  
-  #downloadBtn {
-    position: absolute;
-    right: 140px; /* Moves button further to the left */
-    padding: 5px 20px;
-  }
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
 
-  #printBtn {
-      position: absolute;
-      right: 60px; /* Keeps this button closer to the right */
-      padding: 5px 20px;
-  }
+#header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-bottom: 1px solid #ddd;
+}
+
+#title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+#fontControls {
+  display: flex;
+  gap: 10px;
+}
+
+button {
+  padding: 5px 10px;
+  font-size: 18px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+#container {
+  display: flex;
+  width: 100%;
+  height: calc(100% - 100px); /* Adjust height to account for both header and footer */
+}
+
+#lineNumbers {
+  width: 50px;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-right: 1px solid #ddd;
+  font-family: monospace;
+  font-size: 16px;
+  text-align: right;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  height: 100%;
+  overflow: hidden;
+  line-height: 1.6;
+  display: inline-block;
+}
+
+#textAreaWrapper {
+  flex-grow: 1;
+  display: flex;
+  padding: 10px;
+  overflow: hidden;
+}
+
+#note {
+  flex-grow: 1;
+  width: 100%;
+  font-size: 16px;
+  font-family: Arial, sans-serif;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  height: 100%;
+  overflow-y: auto;
+  outline: none;
+  display: inline-block;
+  line-height: 1.6;
+}
+
+#note:empty:before {
+  content: attr(placeholder);
+  color: #aaa;
+}
+
+#footer {
+  padding: 25px;
+  background-color: #f0f0f0;
+  border-top: 1px solid #ddd;
+  text-align: center;
+  font-size: 14px;
+  color: #333;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+}
+
+#downloadBtn {
+  position: absolute;
+  right: 140px;
+  padding: 5px 20px;
+}
+
+#printBtn {
+  position: absolute;
+  right: 60px;
+  padding: 5px 20px;
+}
+
+/* TAB BAR + SHRINKING BEHAVIOR */
+
+#tab-bar {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  background-color: #e6e6e6;
+  border-bottom: 1px solid #ccc;
+}
+
+#tabContainer {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  overflow: hidden;
+}
+
+/* Tab layout with close button on the right */
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  background-color: #d0d0d0;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.tab .tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-grow: 1;
+}
+
+.tab .close-btn {
+  font-weight: bold;
+  color: #333;
+  cursor: pointer;
+  padding-left: 8px;
+  flex-shrink: 0;
+}
+
+.tab .close-btn:hover {
+  color: red;
+}
+
+.tab.active {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+}
+
+#addTabBtn {
+  background-color: #28a745;
+  color: white;
+  font-weight: bold;
+  border: none;
+  padding: 6px 12px;
+  font-size: 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.edit-title {
+  font-size: 14px;
+  padding: 2px 4px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  width: 100px;
+}

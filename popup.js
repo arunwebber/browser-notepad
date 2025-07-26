@@ -168,88 +168,245 @@ class InputManager {
   }
 }
 
-// NoteApp Class: Manages the note and integrates all other managers
+class TabManager {
+  constructor(noteElement, lineNumberElement) {
+    this.noteElement = noteElement;
+    this.lineNumberElement = lineNumberElement;
+    this.tabs = [];
+    this.currentTabIndex = -1;
+
+    this.tabContainer = document.getElementById('tabContainer');
+    this.addTabBtn = document.getElementById('addTabBtn');
+
+    this.addTabBtn.addEventListener('click', () => this.createNewTab());
+    this.noteElement.addEventListener('input', () => this.saveCurrentTabContent());
+    this.noteElement.addEventListener('scroll', () => this.syncScroll());
+
+    // Load saved tabs and selected tab index
+    const savedTabs = StorageManager.getFromLocalStorage('tabs', null);
+    const savedTabIndex = StorageManager.getFromLocalStorage('currentTabIndex', -1);
+
+    if (savedTabs) {
+      this.tabs = JSON.parse(savedTabs);
+      this.renderTabs();
+      const index = parseInt(savedTabIndex);
+      if (index >= 0 && index < this.tabs.length) {
+        this.switchTab(index);
+      } else {
+        this.switchTab(0);
+      }
+    } else {
+      this.createNewTab();
+    }
+  }
+
+  createNewTab() {
+    this.saveCurrentTabContent();
+
+    const tabId = `tab-${Date.now()}`;
+    const tab = {
+      id: tabId,
+      title: `Note ${this.tabs.length + 1}`,
+      content: '',
+    };
+    this.tabs.push(tab);
+    this.renderTabs();
+    this.switchTab(this.tabs.length - 1);
+    this.saveTabsToStorage();
+  }
+
+  switchTab(index) {
+    if (this.currentTabIndex === index) return;
+
+    this.saveCurrentTabContent();
+    this.currentTabIndex = index;
+
+    // Set new content
+    this.noteElement.textContent = this.tabs[index].content;
+
+    // Restore focus to the editable div
+    this.noteElement.focus();
+
+    // Optional: place cursor at end
+    const range = document.createRange();
+    range.selectNodeContents(this.noteElement);
+    range.collapse(false); // false = cursor at end
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    this.updateLineNumbers();
+    this.highlightActiveTab();
+    this.saveTabsToStorage();
+  }
+
+
+  saveCurrentTabContent() {
+    if (this.currentTabIndex !== -1) {
+      this.tabs[this.currentTabIndex].content = this.noteElement.innerText;
+      this.saveTabsToStorage();
+    }
+  }
+
+  closeTab(index) {
+    if (this.tabs.length <= 1) return;
+
+    this.tabs.splice(index, 1);
+
+    // Adjust the currentTabIndex
+    if (this.currentTabIndex >= this.tabs.length) {
+      this.currentTabIndex = this.tabs.length - 1;
+    } else if (index < this.currentTabIndex) {
+      this.currentTabIndex -= 1;
+    }
+
+    this.renderTabs();
+    this.noteElement.innerText = this.tabs[this.currentTabIndex].content || '';
+    this.updateLineNumbers();
+    this.highlightActiveTab();
+    this.saveTabsToStorage();
+  }
+
+
+    renderTabs() {
+    this.tabContainer.innerHTML = '';
+    this.tabs.forEach((tab, index) => {
+      const tabElement = document.createElement('div');
+      tabElement.classList.add('tab');
+
+      const titleSpan = document.createElement('span');
+      titleSpan.textContent = tab.title;
+      titleSpan.classList.add('tab-title');
+
+      // Enable editing on double click
+      titleSpan.ondblclick = (e) => {
+        e.stopPropagation();
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = tab.title;
+        input.className = 'edit-title';
+
+        // Replace span with input
+        tabElement.replaceChild(input, titleSpan);
+        input.focus();
+
+        // Save on blur or enter
+        const save = () => {
+          tab.title = input.value.trim() || 'Untitled';
+          this.saveTabsToStorage();
+          this.renderTabs();
+        };
+
+        input.onblur = save;
+        input.onkeydown = (e) => {
+          if (e.key === 'Enter') input.blur();
+        };
+      };
+
+      const closeBtn = document.createElement('span');
+      closeBtn.textContent = '×';
+      closeBtn.classList.add('close-btn');
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.closeTab(index);
+      };
+
+      tabElement.appendChild(titleSpan);
+      tabElement.appendChild(closeBtn);
+      tabElement.addEventListener('click', () => this.switchTab(index));
+      this.tabContainer.appendChild(tabElement);
+    });
+    this.highlightActiveTab();
+  }
+
+
+  highlightActiveTab() {
+    const tabElements = this.tabContainer.querySelectorAll('.tab');
+    tabElements.forEach((tab, index) => {
+      tab.classList.toggle('active', index === this.currentTabIndex);
+    });
+  }
+
+  updateLineNumbers() {
+    const lines = this.noteElement.innerText.split('\n').length;
+    this.lineNumberElement.innerText = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+  }
+
+  syncScroll() {
+    this.lineNumberElement.scrollTop = this.noteElement.scrollTop;
+  }
+
+  saveTabsToStorage() {
+    StorageManager.saveToLocalStorage('tabs', JSON.stringify(this.tabs));
+    StorageManager.saveToLocalStorage('currentTabIndex', this.currentTabIndex);
+  }
+}
+
+
 class NoteApp {
-  constructor(noteElementId, lineNumbersElementId, increaseFontBtnId, decreaseFontBtnId, downloadBtnId, printBtnId) {
-    this.noteElement = document.getElementById(noteElementId);
-    this.lineNumbersElement = document.getElementById(lineNumbersElementId);
-    this.increaseFontBtn = document.getElementById(increaseFontBtnId);
-    this.decreaseFontBtn = document.getElementById(decreaseFontBtnId);
-    this.downloadBtn = document.getElementById(downloadBtnId);
-    this.printBtn = document.getElementById(printBtnId); // New Print Button
+  constructor() {
+    this.note = document.getElementById('note');
+    this.lineNumbers = document.getElementById('lineNumbers');
+    this.downloadBtn = document.getElementById('downloadBtn');
+    this.printBtn = document.getElementById('printBtn');
+    this.increaseFont = document.getElementById('increaseFont');
+    this.decreaseFont = document.getElementById('decreaseFont');
 
-    // Create instances of other managers
-    this.fontManager = new FontManager(this.noteElement, this.lineNumbersElement);
-    this.keyboardShortcutManager = new KeyboardShortcutManager(this.noteElement);
-    this.lintingManager = new LintingManager(this.noteElement, this.lineNumbersElement);
-    this.inputManager = new InputManager(this.noteElement, this.keyboardShortcutManager, this.lintingManager);
+    // Managers
+    this.keyboardManager = new KeyboardShortcutManager(this.note);
+    this.lintingManager = new LintingManager(this.note, this.lineNumbers);
+    this.inputManager = new InputManager(this.note, this.keyboardManager, this.lintingManager);
+    this.fontManager = new FontManager(this.note, this.lineNumbers);
+    this.tabManager = new TabManager(this.note, this.lineNumbers);
 
-    // Bind event listeners
-    this.bindEventListeners();
-
-    // Load saved state when the page loads
-    this.loadState();
+    this.bindEvents();
   }
 
-  // Load saved note and font size
-  loadState() {
-    this.noteElement.innerText = StorageManager.getFromLocalStorage('savedNote', '');
-    const fontSize = StorageManager.getFromLocalStorage('fontSize', '16px');
-    this.noteElement.style.fontSize = fontSize;
-    this.lineNumbersElement.style.fontSize = fontSize;
-    this.lintingManager.updateLineNumbers();
+  bindEvents() {
+    this.note.addEventListener('input', () => this.inputManager.handleInput());
+    this.note.addEventListener('paste', (e) => this.inputManager.handlePaste(e));
+    this.note.addEventListener('drop', (e) => this.inputManager.handleDrop(e));
+    this.note.addEventListener('keydown', (e) => this.keyboardManager.handleKeyboardShortcuts(e));
+
+    this.downloadBtn.addEventListener('click', () => this.download());
+    this.printBtn.addEventListener('click', () => {
+      const noteContent = this.note.innerText;
+
+      const printWindow = window.open('', '_blank');
+      const body = printWindow.document.body;
+
+      const pre = printWindow.document.createElement('pre');
+      pre.textContent = noteContent;
+
+      body.appendChild(pre);
+
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    });
+
+    this.increaseFont.addEventListener('mousedown', () => this.fontManager.startIncrease());
+    this.decreaseFont.addEventListener('mousedown', () => this.fontManager.startDecrease());
+    document.addEventListener('mouseup', () => this.fontManager.stopFontChange());
+
+    this.lintingManager.syncScrolling();
   }
 
-  // Bind event listeners for actions
-  bindEventListeners() {
-    const { noteElement, increaseFontBtn, decreaseFontBtn, downloadBtn, printBtn } = this;
-
-    // Note input actions
-    noteElement.addEventListener('input', () => this.inputManager.handleInput());
-    noteElement.addEventListener('paste', (event) => this.inputManager.handlePaste(event));
-    noteElement.addEventListener('drop', (event) => this.inputManager.handleDrop(event));
-    noteElement.addEventListener('scroll', () => { this.lintingManager.lineNumbersElement.scrollTop = noteElement.scrollTop; });
-
-    // Font size controls
-    increaseFontBtn.addEventListener('mousedown', () => this.fontManager.startIncrease());
-    decreaseFontBtn.addEventListener('mousedown', () => this.fontManager.startDecrease());
-    increaseFontBtn.addEventListener('mouseup', this.fontManager.stopFontChange.bind(this.fontManager));
-    decreaseFontBtn.addEventListener('mouseup', this.fontManager.stopFontChange.bind(this.fontManager));
-    increaseFontBtn.addEventListener('mouseleave', this.fontManager.stopFontChange.bind(this.fontManager));
-    decreaseFontBtn.addEventListener('mouseleave', this.fontManager.stopFontChange.bind(this.fontManager));
-
-    // Keyboard shortcuts for undo (Ctrl+Z) and redo (Ctrl+Y)
-    document.addEventListener('keydown', (event) => this.keyboardShortcutManager.handleKeyboardShortcuts(event));
-
-    // Download button event
-    downloadBtn.addEventListener('click', () => this.downloadNote());
-
-    // Print button event
-    printBtn.addEventListener('click', () => this.printNote());
-  }
-
-  // Function to download the note as a .txt file
-  downloadNote() {
-    const noteContent = this.noteElement.innerText;
-    const blob = new Blob([noteContent], { type: 'text/plain' });
+  download() {
+    const text = this.note.innerText;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'note.txt';
+    a.href = url;
+    a.download = `note-${new Date().toISOString()}.txt`;
     a.click();
-    URL.revokeObjectURL(a.href);
-  }
-
-  // Function to print the note
-  printNote() {
-    const printWindow = window.open('', '', 'width=600,height=600');
-    printWindow.document.write('<pre>' + this.noteElement.innerText + '</pre>');
-    printWindow.document.close();
-    printWindow.print();
+    URL.revokeObjectURL(url);
   }
 }
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
-  const noteApp = new NoteApp('note', 'lineNumbers', 'increaseFont', 'decreaseFont', 'downloadBtn', 'printBtn');
+  new NoteApp(); // That's it. Everything is inside.
 });
+
 
