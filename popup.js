@@ -13,6 +13,12 @@ class FontManager {
     }
   }
 
+  adjustFontSize(change) {
+  const currentSize = parseInt(window.getComputedStyle(this.noteElement).fontSize);
+  const newSize = Math.max(10, currentSize + change);
+  this.updateFontSize(newSize);
+  }
+  
   startIncrease() {
     this.fontChangeInterval = setInterval(() => {
       const currentSize = parseInt(window.getComputedStyle(this.noteElement).fontSize);
@@ -411,7 +417,8 @@ class NoteApp {
             printWindow.print();
             printWindow.close();
         });
-
+        this.increaseFont.addEventListener('click', () => this.fontManager.adjustFontSize(2));
+        this.decreaseFont.addEventListener('click', () => this.fontManager.adjustFontSize(-2));
         this.increaseFont.addEventListener('mousedown', () => this.fontManager.startIncrease());
         this.decreaseFont.addEventListener('mousedown', () => this.fontManager.startDecrease());
         document.addEventListener('mouseup', () => this.fontManager.stopFontChange());
