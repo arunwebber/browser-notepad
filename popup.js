@@ -342,71 +342,95 @@ class TabManager {
   }
 }
 
+class DarkModeManager {
+    constructor(toggleSelector) {
+        this.toggle = document.querySelector(toggleSelector);
 
-class NoteApp {
-  constructor() {
-    this.note = document.getElementById('note');
-    this.lineNumbers = document.getElementById('lineNumbers');
-    this.downloadBtn = document.getElementById('downloadBtn');
-    this.printBtn = document.getElementById('printBtn');
-    this.increaseFont = document.getElementById('increaseFont');
-    this.decreaseFont = document.getElementById('decreaseFont');
+        // Load saved preference
+        if (localStorage.getItem("darkMode") === "enabled") {
+            document.body.classList.add("dark-mode");
+            this.toggle.checked = true;
+        }
 
-    // Managers
-    this.keyboardManager = new KeyboardShortcutManager(this.note);
-    this.lintingManager = new LintingManager(this.note, this.lineNumbers);
-    this.inputManager = new InputManager(this.note, this.keyboardManager, this.lintingManager);
-    this.fontManager = new FontManager(this.note, this.lineNumbers);
-    this.tabManager = new TabManager(this.note, this.lineNumbers);
+        this.toggle.addEventListener("change", () => this.toggleDarkMode());
+    }
 
-    this.bindEvents();
-  }
-
-  bindEvents() {
-    this.note.addEventListener('input', () => this.inputManager.handleInput());
-    this.note.addEventListener('paste', (e) => this.inputManager.handlePaste(e));
-    this.note.addEventListener('drop', (e) => this.inputManager.handleDrop(e));
-    this.note.addEventListener('keydown', (e) => this.keyboardManager.handleKeyboardShortcuts(e));
-
-    this.downloadBtn.addEventListener('click', () => this.download());
-    this.printBtn.addEventListener('click', () => {
-      const noteContent = this.note.innerText;
-
-      const printWindow = window.open('', '_blank');
-      const body = printWindow.document.body;
-
-      const pre = printWindow.document.createElement('pre');
-      pre.textContent = noteContent;
-
-      body.appendChild(pre);
-
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-    });
-
-    this.increaseFont.addEventListener('mousedown', () => this.fontManager.startIncrease());
-    this.decreaseFont.addEventListener('mousedown', () => this.fontManager.startDecrease());
-    document.addEventListener('mouseup', () => this.fontManager.stopFontChange());
-
-    this.lintingManager.syncScrolling();
-  }
-
-  download() {
-    const text = this.note.innerText;
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `note-${new Date().toISOString()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+    toggleDarkMode() {
+        if (this.toggle.checked) {
+            document.body.classList.add("dark-mode");
+            localStorage.setItem("darkMode", "enabled");
+        } else {
+            document.body.classList.remove("dark-mode");
+            localStorage.setItem("darkMode", "disabled");
+        }
+    }
 }
 
-// Initialize the app
-document.addEventListener('DOMContentLoaded', () => {
-  new NoteApp(); // That's it. Everything is inside.
+class NoteApp {
+    constructor() {
+        this.note = document.getElementById('note');
+        this.lineNumbers = document.getElementById('lineNumbers');
+        this.downloadBtn = document.getElementById('downloadBtn');
+        this.printBtn = document.getElementById('printBtn');
+        this.increaseFont = document.getElementById('increaseFont');
+        this.decreaseFont = document.getElementById('decreaseFont');
+
+        // Managers
+        this.darkModeManager = new DarkModeManager("#darkModeToggle"); // ✅ NEW
+        this.keyboardManager = new KeyboardShortcutManager(this.note);
+        this.lintingManager = new LintingManager(this.note, this.lineNumbers);
+        this.inputManager = new InputManager(this.note, this.keyboardManager, this.lintingManager);
+        this.fontManager = new FontManager(this.note, this.lineNumbers);
+        this.tabManager = new TabManager(this.note, this.lineNumbers);
+
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        this.note.addEventListener('input', () => this.inputManager.handleInput());
+        this.note.addEventListener('paste', (e) => this.inputManager.handlePaste(e));
+        this.note.addEventListener('drop', (e) => this.inputManager.handleDrop(e));
+        this.note.addEventListener('keydown', (e) => this.keyboardManager.handleKeyboardShortcuts(e));
+
+        this.downloadBtn.addEventListener('click', () => this.download());
+        this.printBtn.addEventListener('click', () => {
+            const noteContent = this.note.innerText;
+
+            const printWindow = window.open('', '_blank');
+            const body = printWindow.document.body;
+
+            const pre = printWindow.document.createElement('pre');
+            pre.textContent = noteContent;
+
+            body.appendChild(pre);
+
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
+        });
+
+        this.increaseFont.addEventListener('mousedown', () => this.fontManager.startIncrease());
+        this.decreaseFont.addEventListener('mousedown', () => this.fontManager.startDecrease());
+        document.addEventListener('mouseup', () => this.fontManager.stopFontChange());
+
+        this.lintingManager.syncScrolling();
+    }
+
+    download() {
+        const text = this.note.innerText;
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `note-${new Date().toISOString()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    new NoteApp();
 });
+
 
 

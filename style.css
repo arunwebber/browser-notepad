@@ -1,3 +1,4 @@
+/* Base Layout */
 body {
   font-family: Arial, sans-serif;
   margin: 0;
@@ -44,7 +45,7 @@ button:hover {
 #container {
   display: flex;
   width: 100%;
-  height: calc(100% - 100px); /* Adjust height to account for both header and footer */
+  height: calc(100% - 100px); /* Adjust height for header + footer */
 }
 
 #lineNumbers {
@@ -113,8 +114,7 @@ button:hover {
   padding: 5px 20px;
 }
 
-/* TAB BAR + SHRINKING BEHAVIOR */
-
+/* Tab Bar */
 #tab-bar {
   display: flex;
   align-items: center;
@@ -130,7 +130,7 @@ button:hover {
   overflow: hidden;
 }
 
-/* Tab layout with close button on the right */
+/* Tab layout */
 .tab {
   display: flex;
   align-items: center;
@@ -185,10 +185,113 @@ button:hover {
   cursor: pointer;
   flex-shrink: 0;
 }
+
 .edit-title {
   font-size: 14px;
   padding: 2px 4px;
   border: 1px solid #ccc;
   border-radius: 3px;
   width: 100px;
+}
+
+/* Toggle switch style */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 20px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #007bff;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+/* Dark Mode */
+body.dark-mode {
+  background-color: #1e1e1e;
+  color: #fff;
+}
+
+body.dark-mode #header,
+body.dark-mode #footer,
+body.dark-mode #lineNumbers,
+body.dark-mode #tab-bar {
+  background-color: #2a2a2a;
+  border-color: #444;
+}
+
+body.dark-mode #title,
+body.dark-mode #footer,
+body.dark-mode #lineNumbers {
+  color: white;
+}
+
+body.dark-mode button {
+  background-color: #444;
+  color: white;
+  border: 1px solid #666;
+}
+
+body.dark-mode button:hover {
+  background-color: #666;
+}
+
+body.dark-mode .tab {
+  background-color: #444;
+  color: white;
+}
+
+body.dark-mode .tab.active {
+  background-color: #007bff;
+  color: white;
+}
+
+body.dark-mode #note {
+  color: white;
+}
+
+body.dark-mode #note:empty:before {
+  color: #bbb;
+}
+
+body.dark-mode .close-btn {
+  color: #ccc;
+}
+
+body.dark-mode .close-btn:hover {
+  color: red;
 }
