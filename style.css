@@ -29,9 +29,12 @@ body {
 }
 
 button {
+  cursor: pointer;
+  touch-action: manipulation;
+  min-width: 32px;
+  min-height: 32px;
   padding: 5px 10px;
   font-size: 18px;
-  cursor: pointer;
   border: 1px solid #ddd;
   background-color: #007bff;
   color: white;

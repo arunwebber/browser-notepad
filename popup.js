@@ -4,34 +4,37 @@ class FontManager {
     this.noteElement = noteElement;
     this.lineNumbersElement = lineNumbersElement;
     this.fontChangeInterval = null;
+
+    // Load saved font size directly from localStorage (no StorageManager needed)
+    const savedFontSize = localStorage.getItem('fontSize');
+    if (savedFontSize) {
+      this.noteElement.style.fontSize = savedFontSize;
+      this.lineNumbersElement.style.fontSize = savedFontSize;
+    }
   }
 
-  // Start increasing font size fluidly
   startIncrease() {
     this.fontChangeInterval = setInterval(() => {
       const currentSize = parseInt(window.getComputedStyle(this.noteElement).fontSize);
       const newSize = currentSize + 2;
       this.updateFontSize(newSize);
-    }, 100); // Repeat every 100ms while holding the button
+    }, 100);
   }
 
-  // Start decreasing font size fluidly
   startDecrease() {
     this.fontChangeInterval = setInterval(() => {
       const currentSize = parseInt(window.getComputedStyle(this.noteElement).fontSize);
-      const newSize = Math.max(10, currentSize - 2); // Prevent going below 10px
+      const newSize = Math.max(10, currentSize - 2);
       this.updateFontSize(newSize);
-    }, 100); // Repeat every 100ms while holding the button
+    }, 100);
   }
 
-  // Update the font size and sync it with line numbers
   updateFontSize(newSize) {
     this.noteElement.style.fontSize = `${newSize}px`;
     this.lineNumbersElement.style.fontSize = `${newSize}px`;
-    StorageManager.saveToLocalStorage('fontSize', `${newSize}px`);
+    localStorage.setItem('fontSize', `${newSize}px`);  // Save font size directly
   }
 
-  // Stop font size change when button is released
   stopFontChange() {
     clearInterval(this.fontChangeInterval);
   }
