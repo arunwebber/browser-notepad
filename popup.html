@@ -21,6 +21,22 @@
       <button id="decreaseFont" aria-label="Zoom Out" type="button">🔍➖</button>
     </div>
   </div>
+        <!-- Right Sidebar Panel -->
+    <div id="rightPanel">
+      <div class="rightPanel-tabs">
+        <button class="rightTab active" data-tab="summary">Summary</button>
+        <button class="rightTab" data-tab="translation">Translation</button>
+        <button class="rightTab" data-tab="grammar">Grammar</button>
+        <button class="rightTab" data-tab="rewriting">Rewriting</button>
+      </div>
+      <div class="rightPanel-content">
+        <div class="rightTabContent" id="summary" style="display: block;">Summary content here...</div>
+        <div class="rightTabContent" id="translation">Translation content here...</div>
+        <div class="rightTabContent" id="grammar">Grammar content here...</div>
+        <div class="rightTabContent" id="rewriting">Rewriting content here...</div>
+      </div>
+    </div>
+
   <!-- 🌟 Updated Tab Bar Section with Add Button -->
   <div id="tab-bar">
     <div id="tabContainer"></div>
@@ -35,6 +51,7 @@
     <div id="textAreaWrapper">
       <div id="note" contenteditable="true" placeholder="Type your notes here..."></div>
     </div>
+    
   </div>
 
   <!-- Footer Section -->

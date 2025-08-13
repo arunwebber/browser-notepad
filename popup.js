@@ -375,6 +375,34 @@ class DarkModeManager {
     }
 }
 
+class AiTabs {
+  constructor(tabSelector, contentSelector) {
+    this.tabElements = document.querySelectorAll(tabSelector);
+    this.contentElements = document.querySelectorAll(contentSelector);
+    this.bindEvents();
+  }
+
+  bindEvents() {
+    this.tabElements.forEach(button => {
+      button.addEventListener("click", () => {
+        this.switchTab(button);
+      });
+    });
+  }
+
+  switchTab(button) {
+    // Remove active class from all tabs
+    this.tabElements.forEach(tab => tab.classList.remove("active"));
+    // Hide all tab contents
+    this.contentElements.forEach(content => content.style.display = "none");
+
+    // Activate the clicked tab
+    button.classList.add("active");
+    // Show the related content
+    document.getElementById(button.dataset.tab).style.display = "block";
+  }
+}
+
 class NoteApp {
     constructor() {
         this.note = document.getElementById('note');
@@ -440,6 +468,7 @@ class NoteApp {
 
 document.addEventListener("DOMContentLoaded", () => {
     new NoteApp();
+    new AiTabs(".rightTab", ".rightTabContent");
 });
 
 
