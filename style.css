@@ -6,6 +6,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  overflow: hidden; /* Prevents body scroll */
 }
 
 #header {
@@ -15,6 +16,7 @@ body {
   padding: 10px;
   background-color: #f0f0f0;
   border-bottom: 1px solid #ddd;
+  position: relative; /* Ensures correct stacking context */
 }
 
 #title {
@@ -317,9 +319,9 @@ body.dark-mode .rightPanel-tabs button.active {
   display: flex;
   flex-direction: column;
   position: fixed;
-  top: 55px; /* below header + tab bar */
+  top: 55px; /* Adjust as needed for your layout */
   right: 0;
-  bottom: 70px; /* above footer */
+  bottom: 70px; /* Leave space for the footer */
   z-index: 1;
 }
 
@@ -375,4 +377,25 @@ body.dark-mode .rightPanel-tabs button {
 
 body.dark-mode .rightPanel-tabs button.active {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.rightTabContent textarea {
+  width: 100%;
+  height: calc(100vh - 350px); /* Adjust for header and footer */
+  resize: none;
+  border: 1px solid #ddd;
+  padding: 10px;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+}
+
+.rightPanel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.rightTabContent {
+  display: none; /* Hide all by default, shown by JS */
 }
