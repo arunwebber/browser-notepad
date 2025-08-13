@@ -321,7 +321,7 @@ body.dark-mode .rightPanel-tabs button.active {
   position: fixed;
   top: 55px; /* Adjust as needed for your layout */
   right: 0;
-  bottom: 70px; /* Leave space for the footer */
+  bottom: 65px; /* Leave space for the footer */
   z-index: 1;
 }
 
