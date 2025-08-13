@@ -298,6 +298,18 @@ body.dark-mode .close-btn {
 body.dark-mode .close-btn:hover {
   color: red;
 }
+
+/* Dark mode adjustments for right panel tabs */
+body.dark-mode .rightPanel-tabs button {
+  color: #ccc; /* Light grey for inactive buttons */
+  background: none;
+}
+
+body.dark-mode .rightPanel-tabs button.active {
+  background-color: #555; /* Dark grey for active tab for better visibility */
+  color: #ffffff; /* White text for the active tab */
+  font-weight: bold;
+}
 #rightPanel {
   width: 250px;
   background: #f4f4f4;
@@ -322,6 +334,7 @@ body.dark-mode .close-btn:hover {
   border: none;
   padding: 10px;
   text-align: left;
+  color: #333;
   cursor: pointer;
 }
 
