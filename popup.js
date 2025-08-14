@@ -395,16 +395,13 @@ class ApiKeyManager {
     this.apiKeyInput = document.getElementById('apiKeyInput');
     this.saveBtn = document.getElementById('saveApiKeyBtn');
     this.closeBtn = document.getElementById('closeModalBtn');
-    this.aiWriteBtn = document.getElementById('aiWriteButton');
     this.settingsBtn = document.getElementById('settingsButton');
 
     this.bindEvents();
   }
 
   bindEvents() {
-    this.aiWriteBtn.addEventListener('click', () => {
-      this.handleAiButtonClick();
-    });
+    // The aiWriteBtn event listener is no longer here
     this.settingsBtn.addEventListener('click', () => {
       this.showModal();
     });
@@ -421,18 +418,10 @@ class ApiKeyManager {
     });
   }
 
-  handleAiButtonClick() {
-    const apiKey = StorageManager.getFromLocalStorage('apiKey');
-    if (!apiKey) {
-      this.showModal();
-    } else {
-      // API key exists, proceed with AI functionality (to be implemented later)
-      alert('API key is already saved. You can now use AI features!');
-    }
-  }
+  // The handleAiButtonClick method is no longer here
+  // The API key check and API call logic is now in SectionManager.handleAiWrite()
 
   showModal() {
-    // Populate the input with the existing key, if any
     const existingKey = StorageManager.getFromLocalStorage('apiKey');
     if (existingKey) {
       this.apiKeyInput.value = existingKey;
@@ -458,6 +447,247 @@ class ApiKeyManager {
   }
 }
 
+class SectionManager {
+    constructor() {
+        this.currentSectionElement = null;
+        this.currentNoteId = null;
+        this.activeSection = null;
+        this.translationManager = null;
+        this.aiNoteElements = document.querySelectorAll('.ai-note');
+        this.apiKeyManager = null;
+        this.apiCache = {};
+        this.pollingTimeout = null;
+
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        this.aiNoteElements.forEach(element => {
+            element.addEventListener('input', () => {
+                this.saveSectionContent();
+            });
+        });
+
+        document.getElementById('aiWriteButton').addEventListener('click', () => {
+            this.handleAiWrite();
+        });
+    }
+
+    setNoteId(noteId) {
+        this.currentNoteId = noteId;
+        this.loadSectionContent(this.activeSection);
+    }
+    
+    setTranslationManager(manager) {
+        this.translationManager = manager;
+    }
+
+    setApiKeyManager(manager) {
+        this.apiKeyManager = manager;
+    }
+
+    switchSection(section) {
+        this.activeSection = section;
+        const newSectionElement = document.querySelector(`.rightTabContent#${section} .ai-note`);
+        
+        if (!newSectionElement) {
+            console.error(`Could not find contenteditable div for section: ${section}`);
+            return;
+        }
+
+        this.currentSectionElement = newSectionElement;
+        this.loadSectionContent(section);
+    }
+    
+    async handleAiWrite() {
+        if (this.activeSection === null) return;
+        
+        if (this.pollingTimeout) {
+            clearTimeout(this.pollingTimeout);
+        }
+
+        const apiKey = StorageManager.getFromLocalStorage('apiKey');
+        console.log('API Key retrieved from local storage:', apiKey);
+        if (!apiKey) {
+            this.apiKeyManager.showModal();
+            return;
+        }
+
+        const noteContent = document.getElementById('note').innerText.trim();
+        if (!noteContent) {
+            alert('Please write some content in the main notepad first.');
+            return;
+        }
+        
+        const cacheKey = `${this.activeSection}-${this.currentNoteId}-${noteContent}`;
+        if (this.apiCache[cacheKey]) {
+            console.log('Using cached result for:', this.activeSection);
+            this.currentSectionElement.innerText = this.apiCache[cacheKey];
+            this.saveSectionContent();
+            return;
+        }
+        
+        this.currentSectionElement.innerText = 'Loading...';
+
+        try {
+            let apiPath;
+            switch (this.activeSection) {
+                case 'summary':
+                    apiPath = '/v1/content/summarize';
+                    break;
+                case 'translation':
+                    apiPath = '/v1/content/translate';
+                    break;
+                case 'grammar':
+                    apiPath = '/v1/content/grammar-correct';
+                    break;
+                case 'rewriting':
+                    apiPath = '/v1/content/rewrite';
+                    break;
+                default:
+                    this.currentSectionElement.innerText = 'Function not implemented for this section.';
+                    return;
+            }
+            
+            const response = await this.callSharpApi('POST', apiPath, apiKey, { content: noteContent });
+
+            if (response.status_url) {
+                this.currentSectionElement.innerText = 'Job accepted. Waiting for result...';
+                this.pollForStatus(response.status_url, apiKey);
+            }
+
+        } catch (error) {
+            console.error('API Error:', error);
+            this.currentSectionElement.innerText = `Error: ${error.message}`;
+        }
+    }
+
+    async pollForStatus(statusUrl, apiKey, retries = 0) {
+        const maxRetries = 10;
+        const pollInterval = 3000;
+
+        if (retries >= maxRetries) {
+            this.currentSectionElement.innerText = 'Job timed out. Please try again.';
+            return;
+        }
+        
+        console.log(`Polling status URL: ${statusUrl} (Retry ${retries + 1}/${maxRetries})`);
+
+        try {
+            const response = await this.callSharpApi('GET', statusUrl, apiKey);
+            console.log('Poll Response:', response);
+
+            // CHANGED: Check for 'completed' or 'success' status
+            if (response.data.attributes.status === 'completed' || response.data.attributes.status === 'success') {
+                const resultJson = JSON.parse(response.data.attributes.result);
+                const finalResult = resultJson.summary || 'No summary found.';
+
+                this.currentSectionElement.innerText = finalResult;
+                const cacheKey = `${this.activeSection}-${this.currentNoteId}-${finalResult}`;
+                this.apiCache[cacheKey] = finalResult;
+                this.saveSectionContent();
+                return;
+            } else if (response.data.attributes.status === 'failed') {
+                this.currentSectionElement.innerText = `Job failed: ${response.data.attributes.message || 'Unknown error'}`;
+                return;
+            }
+            
+            this.pollingTimeout = setTimeout(() => this.pollForStatus(statusUrl, apiKey, retries + 1), pollInterval);
+
+        } catch (error) {
+            console.error('Polling Error:', error);
+            this.currentSectionElement.innerText = `Polling failed: ${error.message}`;
+        }
+    }
+
+    async callSharpApi(method, path, apiKey, body = null) {
+        const url = path.startsWith('http') ? path : `https://sharpapi.com/api${path}`;
+        
+        console.log('Starting API call...');
+        console.log('Method:', method);
+        console.log('URL:', url);
+        if (body) {
+            console.log('Request Body:', body);
+        }
+
+        const headers = new Headers();
+        headers.append("Accept", "application/json");
+        headers.append("Authorization", `Bearer ${apiKey}`);
+        
+        if (method === 'POST') {
+            headers.append("Content-Type", "application/json");
+        }
+        
+        const requestOptions = {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : null,
+            redirect: "follow"
+        };
+        
+        const response = await fetch(url, requestOptions);
+        console.log('Response Status:', response.status);
+        
+        const result = await response.json();
+        console.log('Response Body:', result);
+
+        if (response.status >= 400 && response.status !== 202) {
+             throw new Error(result.message || `API call failed with status ${response.status}`);
+        }
+        
+        return result;
+    }
+
+    saveSectionContent() {
+        if (!this.currentNoteId || !this.currentSectionElement || !this.activeSection) return;
+        
+        let key = `${this.currentNoteId}-${this.activeSection}`;
+        if (this.activeSection === 'translation' && this.translationManager) {
+            const language = this.translationManager.getSelectedLanguage();
+            key = `${this.currentNoteId}-${this.activeSection}-${language}`;
+        }
+        
+        const content = this.currentSectionElement.innerText;
+        StorageManager.saveToLocalStorage(key, content);
+    }
+
+    loadSectionContent(section) {
+        if (!this.currentNoteId || !section) return;
+        
+        let key = `${this.currentNoteId}-${section}`;
+        if (section === 'translation' && this.translationManager) {
+            const language = this.translationManager.getSelectedLanguage();
+            key = `${this.currentNoteId}-${section}-${language}`;
+        }
+        
+        const content = StorageManager.getFromLocalStorage(key, '');
+        
+        const element = document.querySelector(`.rightTabContent#${section} .ai-note`);
+        if (element) {
+            element.innerText = content;
+            element.focus();
+            this.placeCursorAtEnd(element);
+        }
+    }
+    
+    clearContent(noteId) {
+        if (this.currentNoteId === noteId) {
+            if (this.currentSectionElement) {
+                this.currentSectionElement.innerText = '';
+            }
+        }
+    }
+
+    placeCursorAtEnd(element) {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        range.collapse(false);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+}
+
 class NoteApp {
     constructor() {
         this.note = document.getElementById('note');
@@ -476,8 +706,11 @@ class NoteApp {
         this.aiTabs = new AiTabs(".rightTab", ".rightTabContent", this.sectionManager);
         this.translationManager = new TranslationManager(this.sectionManager);
         
-        // New: Instantiate ApiKeyManager
         this.apiKeyManager = new ApiKeyManager();
+        
+        // Connect the managers
+        this.sectionManager.setTranslationManager(this.translationManager);
+        this.sectionManager.setApiKeyManager(this.apiKeyManager);
         
         this.bindEvents();
     }
@@ -501,6 +734,11 @@ class NoteApp {
         this.downloadBtn.addEventListener('click', () => this.download());
         this.printBtn.addEventListener('click', () => this.print());
         this.lintingManager.syncScrolling();
+        
+        // CORRECTED: The AI button now calls the method on SectionManager
+        document.getElementById('aiWriteButton').addEventListener('click', () => {
+            this.sectionManager.handleAiWrite();
+        });
     }
 
     pasteHandler(event) {
@@ -543,101 +781,6 @@ class NoteApp {
     }
 }
 
-class SectionManager {
-    constructor() {
-        this.currentSectionElement = null;
-        this.currentNoteId = null;
-        this.activeSection = null;
-        this.translationManager = null; // New property to hold the TranslationManager instance
-        this.aiNoteElements = document.querySelectorAll('.ai-note');
-        this.bindEvents();
-    }
-
-    bindEvents() {
-        this.aiNoteElements.forEach(element => {
-            element.addEventListener('input', () => {
-                this.saveSectionContent();
-            });
-        });
-    }
-
-    setNoteId(noteId) {
-        this.currentNoteId = noteId;
-        this.loadSectionContent(this.activeSection);
-    }
-    
-    setTranslationManager(manager) {
-        this.translationManager = manager;
-    }
-
-    switchSection(section) {
-        this.activeSection = section;
-        const newSectionElement = document.querySelector(`.rightTabContent#${section} .ai-note`);
-        
-        if (!newSectionElement) {
-            console.error(`Could not find contenteditable div for section: ${section}`);
-            return;
-        }
-
-        this.currentSectionElement = newSectionElement;
-        this.loadSectionContent(section);
-    }
-
-    saveSectionContent() {
-        if (!this.currentNoteId || !this.currentSectionElement || !this.activeSection) return;
-        
-        let key = `${this.currentNoteId}-${this.activeSection}`;
-        
-        // Use a different key for translation to include the language
-        if (this.activeSection === 'translation' && this.translationManager) {
-            const language = this.translationManager.getSelectedLanguage();
-            key = `${this.currentNoteId}-${this.activeSection}-${language}`;
-        }
-        
-        const content = this.currentSectionElement.innerText;
-        StorageManager.saveToLocalStorage(key, content);
-    }
-
-    loadSectionContent(section) {
-        if (!this.currentNoteId || !section) return;
-        
-        let key = `${this.currentNoteId}-${section}`;
-        
-        // Use the specific key for translation
-        if (section === 'translation' && this.translationManager) {
-            const language = this.translationManager.getSelectedLanguage();
-            key = `${this.currentNoteId}-${section}-${language}`;
-        }
-        
-        const content = StorageManager.getFromLocalStorage(key, '');
-        
-        const element = document.querySelector(`.rightTabContent#${section} .ai-note`);
-        if (element) {
-            element.innerText = content;
-            element.focus();
-            this.placeCursorAtEnd(element);
-        }
-    }
-    
-    clearContent(noteId) {
-        if (this.currentNoteId === noteId) {
-            if (this.currentSectionElement) {
-                this.currentSectionElement.innerText = '';
-            }
-        }
-    }
-
-    placeCursorAtEnd(element) {
-        const range = document.createRange();
-        range.selectNodeContents(element);
-        range.collapse(false);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-    }
-}
-
 document.addEventListener("DOMContentLoaded", () => {
     const app = new NoteApp();
-    app.sectionManager.setTranslationManager(app.translationManager);
-}); 
+});
