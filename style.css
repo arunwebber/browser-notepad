@@ -379,7 +379,6 @@ input:checked + .slider:before {
   border-left: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
-  /* Removed fixed positioning to place it in the document flow */
   position: relative;
   transition: background-color 0.3s, border-color 0.3s;
 }
@@ -520,4 +519,74 @@ body.dark-mode #translationLanguageSelect {
   border-color: var(--border-dark);
   color: var(--text-dark);
   background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23fff%22%20d%3D%22M287%20197.8L151.4%2035.2c-4.4-4.8-10.9-7.7-17.8-7.7s-13.4%202.9-17.8%207.7L5.4%20197.8c-7.2%207.6-7.2%2019.9%200%2027.5%203.6%203.8%208.5%205.8%2013.4%205.8%204.9%200%209.8-2%2013.4-5.8L142.6%2095.4l110.4%20119.9c3.6%203.8%208.5%205.8%2013.4%205.8s9.8-2%2013.4-5.8c7.2-7.6%207.2-19.9%200-27.5z%22%2F%3E%3C%2Fsvg%3E');
+}
+
+/* Modal Overlay - Hides the popup by default */
+.modal-overlay {
+  display: none; /* Initially hidden */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Modal Content - The actual popup box */
+.modal-content {
+  background-color: var(--bg-light);
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  text-align: center;
+  transition: background-color 0.3s;
+}
+
+/* Dark mode for the modal */
+body.dark-mode .modal-content {
+  background-color: var(--element-bg-dark);
+}
+
+#apiKeyInput {
+  width: 90%;
+  padding: 10px;
+  margin: 15px 0;
+  border: 1px solid var(--border-light);
+  border-radius: 5px;
+  font-size: 16px;
+  outline: none;
+}
+
+body.dark-mode #apiKeyInput {
+  background-color: var(--bg-dark);
+  border-color: var(--border-dark);
+  color: var(--text-dark);
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modal-buttons button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+#saveApiKeyBtn {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+#closeModalBtn {
+  background-color: #ccc;
+  color: #333;
 }

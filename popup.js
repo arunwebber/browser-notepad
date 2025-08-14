@@ -389,6 +389,75 @@ class TranslationManager {
     }
 }
 
+class ApiKeyManager {
+  constructor() {
+    this.modal = document.getElementById('apiKeyModal');
+    this.apiKeyInput = document.getElementById('apiKeyInput');
+    this.saveBtn = document.getElementById('saveApiKeyBtn');
+    this.closeBtn = document.getElementById('closeModalBtn');
+    this.aiWriteBtn = document.getElementById('aiWriteButton');
+    this.settingsBtn = document.getElementById('settingsButton');
+
+    this.bindEvents();
+  }
+
+  bindEvents() {
+    this.aiWriteBtn.addEventListener('click', () => {
+      this.handleAiButtonClick();
+    });
+    this.settingsBtn.addEventListener('click', () => {
+      this.showModal();
+    });
+    this.saveBtn.addEventListener('click', () => {
+      this.saveApiKey();
+    });
+    this.closeBtn.addEventListener('click', () => {
+      this.hideModal();
+    });
+    this.modal.addEventListener('click', (event) => {
+      if (event.target === this.modal) {
+        this.hideModal();
+      }
+    });
+  }
+
+  handleAiButtonClick() {
+    const apiKey = StorageManager.getFromLocalStorage('apiKey');
+    if (!apiKey) {
+      this.showModal();
+    } else {
+      // API key exists, proceed with AI functionality (to be implemented later)
+      alert('API key is already saved. You can now use AI features!');
+    }
+  }
+
+  showModal() {
+    // Populate the input with the existing key, if any
+    const existingKey = StorageManager.getFromLocalStorage('apiKey');
+    if (existingKey) {
+      this.apiKeyInput.value = existingKey;
+    } else {
+      this.apiKeyInput.value = '';
+    }
+    this.modal.style.display = 'flex';
+  }
+
+  hideModal() {
+    this.modal.style.display = 'none';
+  }
+
+  saveApiKey() {
+    const key = this.apiKeyInput.value.trim();
+    if (key) {
+      StorageManager.saveToLocalStorage('apiKey', key);
+      alert('API Key saved successfully!');
+      this.hideModal();
+    } else {
+      alert('Please enter a valid API key.');
+    }
+  }
+}
+
 class NoteApp {
     constructor() {
         this.note = document.getElementById('note');
@@ -405,8 +474,11 @@ class NoteApp {
         this.tabManager = new TabManager(this.note, this.lineNumbers, this.sectionManager);
         this.fontManager = new FontManager(this.note, this.lineNumbers);
         this.aiTabs = new AiTabs(".rightTab", ".rightTabContent", this.sectionManager);
-        this.translationManager = new TranslationManager(this.sectionManager); // Pass sectionManager here
-
+        this.translationManager = new TranslationManager(this.sectionManager);
+        
+        // New: Instantiate ApiKeyManager
+        this.apiKeyManager = new ApiKeyManager();
+        
         this.bindEvents();
     }
 
@@ -567,5 +639,5 @@ class SectionManager {
 
 document.addEventListener("DOMContentLoaded", () => {
     const app = new NoteApp();
-    app.sectionManager.setTranslationManager(app.translationManager); // Connect the two managers
-});
+    app.sectionManager.setTranslationManager(app.translationManager);
+}); 
