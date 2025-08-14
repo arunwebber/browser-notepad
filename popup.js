@@ -210,7 +210,6 @@ class TabManager {
 
         this.tabs.splice(index, 1);
         
-        // Remove the main note content and all associated AI tab content
         StorageManager.removeFromLocalStorage(tabToClose.id);
         ['summary', 'translation', 'grammar', 'rewriting'].forEach(section => {
             const key = `${tabToClose.id}-${section}`;
@@ -357,6 +356,39 @@ class AiTabs {
     }
 }
 
+class TranslationManager {
+    constructor(sectionManager) {
+        this.selectElement = document.getElementById('translationLanguageSelect');
+        this.defaultLanguage = 'en';
+        this.sectionManager = sectionManager;
+
+        this.loadLanguage();
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        this.selectElement.addEventListener('change', () => {
+            this.saveLanguage();
+            // Inform the section manager to load new content
+            this.sectionManager.loadSectionContent('translation');
+        });
+    }
+
+    loadLanguage() {
+        const savedLanguage = StorageManager.getFromLocalStorage('translationLanguage', this.defaultLanguage);
+        this.selectElement.value = savedLanguage;
+    }
+
+    saveLanguage() {
+        const selectedLanguage = this.selectElement.value;
+        StorageManager.saveToLocalStorage('translationLanguage', selectedLanguage);
+    }
+
+    getSelectedLanguage() {
+        return this.selectElement.value;
+    }
+}
+
 class NoteApp {
     constructor() {
         this.note = document.getElementById('note');
@@ -373,6 +405,8 @@ class NoteApp {
         this.tabManager = new TabManager(this.note, this.lineNumbers, this.sectionManager);
         this.fontManager = new FontManager(this.note, this.lineNumbers);
         this.aiTabs = new AiTabs(".rightTab", ".rightTabContent", this.sectionManager);
+        this.translationManager = new TranslationManager(this.sectionManager); // Pass sectionManager here
+
         this.bindEvents();
     }
 
@@ -442,6 +476,7 @@ class SectionManager {
         this.currentSectionElement = null;
         this.currentNoteId = null;
         this.activeSection = null;
+        this.translationManager = null; // New property to hold the TranslationManager instance
         this.aiNoteElements = document.querySelectorAll('.ai-note');
         this.bindEvents();
     }
@@ -457,6 +492,10 @@ class SectionManager {
     setNoteId(noteId) {
         this.currentNoteId = noteId;
         this.loadSectionContent(this.activeSection);
+    }
+    
+    setTranslationManager(manager) {
+        this.translationManager = manager;
     }
 
     switchSection(section) {
@@ -475,7 +514,14 @@ class SectionManager {
     saveSectionContent() {
         if (!this.currentNoteId || !this.currentSectionElement || !this.activeSection) return;
         
-        const key = `${this.currentNoteId}-${this.activeSection}`;
+        let key = `${this.currentNoteId}-${this.activeSection}`;
+        
+        // Use a different key for translation to include the language
+        if (this.activeSection === 'translation' && this.translationManager) {
+            const language = this.translationManager.getSelectedLanguage();
+            key = `${this.currentNoteId}-${this.activeSection}-${language}`;
+        }
+        
         const content = this.currentSectionElement.innerText;
         StorageManager.saveToLocalStorage(key, content);
     }
@@ -483,7 +529,14 @@ class SectionManager {
     loadSectionContent(section) {
         if (!this.currentNoteId || !section) return;
         
-        const key = `${this.currentNoteId}-${section}`;
+        let key = `${this.currentNoteId}-${section}`;
+        
+        // Use the specific key for translation
+        if (section === 'translation' && this.translationManager) {
+            const language = this.translationManager.getSelectedLanguage();
+            key = `${this.currentNoteId}-${section}-${language}`;
+        }
+        
         const content = StorageManager.getFromLocalStorage(key, '');
         
         const element = document.querySelector(`.rightTabContent#${section} .ai-note`);
@@ -494,7 +547,6 @@ class SectionManager {
         }
     }
     
-    // New method to clear content
     clearContent(noteId) {
         if (this.currentNoteId === noteId) {
             if (this.currentSectionElement) {
@@ -514,5 +566,6 @@ class SectionManager {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    new NoteApp();
+    const app = new NoteApp();
+    app.sectionManager.setTranslationManager(app.translationManager); // Connect the two managers
 });

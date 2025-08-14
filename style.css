@@ -492,3 +492,30 @@ body.dark-mode .rightTabContent .ai-note:empty:before {
 body.dark-mode #buttonWrapper {
   border-top-color: var(--border-dark);
 }
+
+/* --- Translation Dropdown --- */
+#translationLanguageSelect {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 15px; /* Add some space below the dropdown */
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background-color: white;
+  font-size: 15px;
+  -webkit-appearance: none; /* Remove default browser styling */
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007bff%22%20d%3D%22M287%20197.8L151.4%2035.2c-4.4-4.8-10.9-7.7-17.8-7.7s-13.4%202.9-17.8%207.7L5.4%20197.8c-7.2%207.6-7.2%2019.9%200%2027.5%203.6%203.8%208.5%205.8%2013.4%205.8%204.9%200%209.8-2%2013.4-5.8L142.6%2095.4l110.4%20119.9c3.6%203.8%208.5%205.8%2013.4%205.8s9.8-2%2013.4-5.8c7.2-7.6%207.2-19.9%200-27.5z%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 10px top 50%;
+  background-size: 12px;
+  cursor: pointer;
+}
+
+/* Dark mode styling */
+body.dark-mode #translationLanguageSelect {
+  background-color: var(--element-bg-dark);
+  border-color: var(--border-dark);
+  color: var(--text-dark);
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23fff%22%20d%3D%22M287%20197.8L151.4%2035.2c-4.4-4.8-10.9-7.7-17.8-7.7s-13.4%202.9-17.8%207.7L5.4%20197.8c-7.2%207.6-7.2%2019.9%200%2027.5%203.6%203.8%208.5%205.8%2013.4%205.8%204.9%200%209.8-2%2013.4-5.8L142.6%2095.4l110.4%20119.9c3.6%203.8%208.5%205.8%2013.4%205.8s9.8-2%2013.4-5.8c7.2-7.6%207.2-19.9%200-27.5z%22%2F%3E%3C%2Fsvg%3E');
+}
