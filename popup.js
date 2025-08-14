@@ -5,7 +5,6 @@ class FontManager {
     this.lineNumbersElement = lineNumbersElement;
     this.fontChangeInterval = null;
 
-    // Load saved font size directly from localStorage (no StorageManager needed)
     const savedFontSize = localStorage.getItem('fontSize');
     if (savedFontSize) {
       this.noteElement.style.fontSize = savedFontSize;
@@ -14,11 +13,11 @@ class FontManager {
   }
 
   adjustFontSize(change) {
-  const currentSize = parseInt(window.getComputedStyle(this.noteElement).fontSize);
-  const newSize = Math.max(10, currentSize + change);
-  this.updateFontSize(newSize);
+    const currentSize = parseInt(window.getComputedStyle(this.noteElement).fontSize);
+    const newSize = Math.max(10, currentSize + change);
+    this.updateFontSize(newSize);
   }
-  
+
   startIncrease() {
     this.fontChangeInterval = setInterval(() => {
       const currentSize = parseInt(window.getComputedStyle(this.noteElement).fontSize);
@@ -38,7 +37,7 @@ class FontManager {
   updateFontSize(newSize) {
     this.noteElement.style.fontSize = `${newSize}px`;
     this.lineNumbersElement.style.fontSize = `${newSize}px`;
-    localStorage.setItem('fontSize', `${newSize}px`);  // Save font size directly
+    localStorage.setItem('fontSize', `${newSize}px`);
   }
 
   stopFontChange() {
@@ -54,44 +53,38 @@ class KeyboardShortcutManager {
     this.redoStack = [];
   }
 
-  // Save the current state to undo stack
   saveState() {
     this.undoStack.push(this.noteElement.innerText);
     if (this.undoStack.length > 50) {
-      this.undoStack.shift(); // Keep the stack size manageable
+      this.undoStack.shift();
     }
-    this.redoStack = []; // Clear redo stack after a new action
+    this.redoStack = [];
   }
 
-  // Undo the last action
   undo() {
     if (this.undoStack.length > 0) {
       const lastState = this.undoStack.pop();
       this.redoStack.push(this.noteElement.innerText);
       this.noteElement.innerText = lastState;
-      StorageManager.saveToLocalStorage('savedNote', this.noteElement.innerText);
     }
   }
 
-  // Redo the last undone action
   redo() {
     if (this.redoStack.length > 0) {
       const lastState = this.redoStack.pop();
       this.undoStack.push(this.noteElement.innerText);
       this.noteElement.innerText = lastState;
-      StorageManager.saveToLocalStorage('savedNote', this.noteElement.innerText);
     }
   }
 
-  // Handle keyboard shortcuts for undo and redo
   handleKeyboardShortcuts(event) {
     if (event.ctrlKey) {
       if (event.key === 'z' || event.key === 'Z') {
         event.preventDefault();
-        this.undo(); // Perform undo action
+        this.undo();
       } else if (event.key === 'y' || event.key === 'Y') {
         event.preventDefault();
-        this.redo(); // Perform redo action
+        this.redo();
       }
     }
   }
@@ -104,7 +97,6 @@ class LintingManager {
     this.lineNumbersElement = lineNumbersElement;
   }
 
-  // Update line numbers based on the note's content
   updateLineNumbers() {
     const lines = this.noteElement.innerText.split('\n').length;
     let lineNumberText = '';
@@ -114,7 +106,6 @@ class LintingManager {
     this.lineNumbersElement.innerText = lineNumberText;
   }
 
-  // Sync scrolling between the note area and line numbers
   syncScrolling() {
     this.noteElement.addEventListener('scroll', () => {
       this.lineNumbersElement.scrollTop = this.noteElement.scrollTop;
@@ -124,243 +115,205 @@ class LintingManager {
 
 // StorageManager Class: Handles localStorage operations
 class StorageManager {
-  // Save data to localStorage
   static saveToLocalStorage(key, value) {
     localStorage.setItem(key, value);
   }
 
-  // Retrieve data from localStorage
   static getFromLocalStorage(key, defaultValue = '') {
     return localStorage.getItem(key) || defaultValue;
   }
-}
-
-// InputManager Class: Handles input, paste, and drop events
-class InputManager {
-  constructor(noteElement, keyboardShortcutManager, lintingManager) {
-    this.noteElement = noteElement;
-    this.keyboardShortcutManager = keyboardShortcutManager;
-    this.lintingManager = lintingManager;
-  }
-
-  // Handle input events and save the state
-  handleInput() {
-    this.keyboardShortcutManager.saveState();
-    StorageManager.saveToLocalStorage('savedNote', this.noteElement.innerText);
-    this.lintingManager.updateLineNumbers();
-  }
-
-  // Handle paste events (only plain text should be pasted)
-  handlePaste(event) {
-    event.preventDefault(); // Prevent the default paste behavior
-    const plainText = (event.clipboardData || window.clipboardData).getData('text');
-    this.insertTextAtCaret(plainText);
-    this.keyboardShortcutManager.saveState();
-  }
-
-  // Handle drop events (append plain text)
-  handleDrop(event) {
-    event.preventDefault();
-    const plainText = event.dataTransfer.getData('text');
-    this.insertTextAtCaret(plainText);
-    this.keyboardShortcutManager.saveState();
-  }
-
-  // Insert text at the current caret position
-  insertTextAtCaret(text) {
-    const selection = window.getSelection();
-    const range = selection.getRangeAt(0);
-    range.deleteContents(); // Remove any selected content
-    range.insertNode(document.createTextNode(text)); // Insert new plain text
-    StorageManager.saveToLocalStorage('savedNote', this.noteElement.innerText);
-    this.lintingManager.updateLineNumbers();
+  
+  static removeFromLocalStorage(key) {
+      localStorage.removeItem(key);
   }
 }
 
 class TabManager {
-  constructor(noteElement, lineNumberElement) {
-    this.noteElement = noteElement;
-    this.lineNumberElement = lineNumberElement;
-    this.tabs = [];
-    this.currentTabIndex = -1;
+    constructor(noteElement, lineNumberElement, sectionManager) {
+        this.noteElement = noteElement;
+        this.lineNumberElement = lineNumberElement;
+        this.sectionManager = sectionManager;
+        this.tabs = [];
+        this.currentTabIndex = -1;
 
-    this.tabContainer = document.getElementById('tabContainer');
-    this.addTabBtn = document.getElementById('addTabBtn');
+        this.tabContainer = document.getElementById('tabContainer');
+        this.addTabBtn = document.getElementById('addTabBtn');
 
-    this.addTabBtn.addEventListener('click', () => this.createNewTab());
-    this.noteElement.addEventListener('input', () => this.saveCurrentTabContent());
-    this.noteElement.addEventListener('scroll', () => this.syncScroll());
+        this.addTabBtn.addEventListener('click', () => this.createNewTab());
+        this.noteElement.addEventListener('scroll', () => this.syncScroll());
 
-    // Load saved tabs and selected tab index
-    const savedTabs = StorageManager.getFromLocalStorage('tabs', null);
-    const savedTabIndex = StorageManager.getFromLocalStorage('currentTabIndex', -1);
+        const savedTabs = StorageManager.getFromLocalStorage('tabs', null);
+        const savedTabIndex = StorageManager.getFromLocalStorage('currentTabIndex', -1);
 
-    if (savedTabs) {
-      this.tabs = JSON.parse(savedTabs);
-      this.renderTabs();
-      const index = parseInt(savedTabIndex);
-      if (index >= 0 && index < this.tabs.length) {
-        this.switchTab(index);
-      } else {
-        this.switchTab(0);
-      }
-    } else {
-      this.createNewTab();
-    }
-  }
-
-  createNewTab() {
-    this.saveCurrentTabContent();
-
-    const tabId = `tab-${Date.now()}`;
-    const tab = {
-      id: tabId,
-      title: `Note ${this.tabs.length + 1}`,
-      content: '',
-    };
-    this.tabs.push(tab);
-    this.renderTabs();
-    this.switchTab(this.tabs.length - 1);
-    this.saveTabsToStorage();
-  }
-
-  switchTab(index) {
-    if (this.currentTabIndex === index) return;
-
-    this.saveCurrentTabContent();
-    this.currentTabIndex = index;
-
-    // Set new content
-    this.noteElement.textContent = this.tabs[index].content;
-
-    // Restore focus to the editable div
-    this.noteElement.focus();
-
-    // Optional: place cursor at end
-    const range = document.createRange();
-    range.selectNodeContents(this.noteElement);
-    range.collapse(false); // false = cursor at end
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-
-    this.updateLineNumbers();
-    this.highlightActiveTab();
-    this.saveTabsToStorage();
-  }
-
-
-  saveCurrentTabContent() {
-    if (this.currentTabIndex !== -1) {
-      this.tabs[this.currentTabIndex].content = this.noteElement.innerText;
-      this.saveTabsToStorage();
-    }
-  }
-
-  closeTab(index) {
-    if (this.tabs.length <= 1) return;
-
-    this.tabs.splice(index, 1);
-
-    // Adjust the currentTabIndex
-    if (this.currentTabIndex >= this.tabs.length) {
-      this.currentTabIndex = this.tabs.length - 1;
-    } else if (index < this.currentTabIndex) {
-      this.currentTabIndex -= 1;
+        if (savedTabs) {
+            this.tabs = JSON.parse(savedTabs);
+            this.renderTabs();
+            const index = parseInt(savedTabIndex);
+            if (index >= 0 && index < this.tabs.length) {
+                this.switchTab(index);
+            } else {
+                this.switchTab(0);
+            }
+        } else {
+            this.createNewTab();
+        }
     }
 
-    this.renderTabs();
-    this.noteElement.innerText = this.tabs[this.currentTabIndex].content || '';
-    this.updateLineNumbers();
-    this.highlightActiveTab();
-    this.saveTabsToStorage();
-  }
+    createNewTab() {
+        if (this.currentTabIndex !== -1) {
+            this.saveCurrentTabContent();
+        }
 
+        const tabId = `note-${Date.now()}`;
+        const tab = {
+            id: tabId,
+            title: `Note ${this.tabs.length + 1}`,
+            content: '',
+        };
+        this.tabs.push(tab);
+        this.renderTabs();
+        this.switchTab(this.tabs.length - 1);
+    }
+
+    switchTab(index) {
+        if (this.currentTabIndex === index) return;
+
+        this.saveCurrentTabContent();
+
+        this.currentTabIndex = index;
+        const currentTab = this.tabs[this.currentTabIndex];
+        this.noteElement.innerText = StorageManager.getFromLocalStorage(currentTab.id, '');
+        
+        this.sectionManager.setNoteId(currentTab.id);
+
+        this.updateLineNumbers();
+        this.highlightActiveTab();
+        this.saveTabsToStorage();
+        this.placeCursorAtEnd(this.noteElement);
+    }
+    
+    saveCurrentTabContent() {
+        if (this.currentTabIndex === -1) return;
+        const currentTab = this.tabs[this.currentTabIndex];
+        StorageManager.saveToLocalStorage(currentTab.id, this.noteElement.innerText);
+    }
+
+    closeTab(index) {
+        if (this.tabs.length <= 1) return;
+        
+        const tabToClose = this.tabs[index];
+
+        if (index === this.currentTabIndex) {
+            this.saveCurrentTabContent();
+            this.sectionManager.clearContent(tabToClose.id);
+        }
+
+        this.tabs.splice(index, 1);
+        
+        // Remove the main note content and all associated AI tab content
+        StorageManager.removeFromLocalStorage(tabToClose.id);
+        ['summary', 'translation', 'grammar', 'rewriting'].forEach(section => {
+            const key = `${tabToClose.id}-${section}`;
+            StorageManager.removeFromLocalStorage(key);
+        });
+
+        if (this.currentTabIndex >= this.tabs.length) {
+            this.currentTabIndex = this.tabs.length - 1;
+        } else if (index < this.currentTabIndex) {
+            this.currentTabIndex -= 1;
+        }
+
+        this.renderTabs();
+        this.switchTab(this.currentTabIndex);
+    }
 
     renderTabs() {
-    this.tabContainer.innerHTML = '';
-    this.tabs.forEach((tab, index) => {
-      const tabElement = document.createElement('div');
-      tabElement.classList.add('tab');
+        this.tabContainer.innerHTML = '';
+        this.tabs.forEach((tab, index) => {
+            const tabElement = document.createElement('div');
+            tabElement.classList.add('tab');
 
-      const titleSpan = document.createElement('span');
-      titleSpan.textContent = tab.title;
-      titleSpan.classList.add('tab-title');
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = tab.title;
+            titleSpan.classList.add('tab-title');
 
-      // Enable editing on double click
-      titleSpan.ondblclick = (e) => {
-        e.stopPropagation();
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = tab.title;
-        input.className = 'edit-title';
+            titleSpan.ondblclick = (e) => {
+                e.stopPropagation();
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = tab.title;
+                input.className = 'edit-title';
 
-        // Replace span with input
-        tabElement.replaceChild(input, titleSpan);
-        input.focus();
+                tabElement.replaceChild(input, titleSpan);
+                input.focus();
 
-        // Save on blur or enter
-        const save = () => {
-          tab.title = input.value.trim() || 'Untitled';
-          this.saveTabsToStorage();
-          this.renderTabs();
-        };
+                const save = () => {
+                    tab.title = input.value.trim() || 'Untitled';
+                    this.saveTabsToStorage();
+                    this.renderTabs();
+                };
 
-        input.onblur = save;
-        input.onkeydown = (e) => {
-          if (e.key === 'Enter') input.blur();
-        };
-      };
+                input.onblur = save;
+                input.onkeydown = (e) => {
+                    if (e.key === 'Enter') input.blur();
+                };
+            };
 
-      const closeBtn = document.createElement('span');
-      closeBtn.textContent = '×';
-      closeBtn.classList.add('close-btn');
-      closeBtn.onclick = (e) => {
-        e.stopPropagation();
-        this.closeTab(index);
-      };
+            const closeBtn = document.createElement('span');
+            closeBtn.textContent = '×';
+            closeBtn.classList.add('close-btn');
+            closeBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.closeTab(index);
+            };
 
-      tabElement.appendChild(titleSpan);
-      tabElement.appendChild(closeBtn);
-      tabElement.addEventListener('click', () => this.switchTab(index));
-      this.tabContainer.appendChild(tabElement);
-    });
-    this.highlightActiveTab();
-  }
+            tabElement.appendChild(titleSpan);
+            tabElement.appendChild(closeBtn);
+            tabElement.addEventListener('click', () => this.switchTab(index));
+            this.tabContainer.appendChild(tabElement);
+        });
+        this.highlightActiveTab();
+    }
 
+    highlightActiveTab() {
+        const tabElements = this.tabContainer.querySelectorAll('.tab');
+        tabElements.forEach((tab, index) => {
+            tab.classList.toggle('active', index === this.currentTabIndex);
+        });
+    }
 
-  highlightActiveTab() {
-    const tabElements = this.tabContainer.querySelectorAll('.tab');
-    tabElements.forEach((tab, index) => {
-      tab.classList.toggle('active', index === this.currentTabIndex);
-    });
-  }
+    updateLineNumbers() {
+        const lines = this.noteElement.innerText.split('\n').length;
+        this.lineNumberElement.innerText = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+    }
 
-  updateLineNumbers() {
-    const lines = this.noteElement.innerText.split('\n').length;
-    this.lineNumberElement.innerText = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
-  }
+    syncScroll() {
+        this.lineNumberElement.scrollTop = this.noteElement.scrollTop;
+    }
 
-  syncScroll() {
-    this.lineNumberElement.scrollTop = this.noteElement.scrollTop;
-  }
+    placeCursorAtEnd(element) {
+        element.focus();
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        range.collapse(false);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
 
-  saveTabsToStorage() {
-    StorageManager.saveToLocalStorage('tabs', JSON.stringify(this.tabs));
-    StorageManager.saveToLocalStorage('currentTabIndex', this.currentTabIndex);
-  }
+    saveTabsToStorage() {
+        StorageManager.saveToLocalStorage('tabs', JSON.stringify(this.tabs));
+        StorageManager.saveToLocalStorage('currentTabIndex', this.currentTabIndex);
+    }
 }
 
 class DarkModeManager {
     constructor(toggleSelector) {
         this.toggle = document.querySelector(toggleSelector);
-
-        // Load saved preference
         if (localStorage.getItem("darkMode") === "enabled") {
             document.body.classList.add("dark-mode");
             this.toggle.checked = true;
         }
-
         this.toggle.addEventListener("change", () => this.toggleDarkMode());
     }
 
@@ -376,31 +329,32 @@ class DarkModeManager {
 }
 
 class AiTabs {
-  constructor(tabSelector, contentSelector) {
-    this.tabElements = document.querySelectorAll(tabSelector);
-    this.contentElements = document.querySelectorAll(contentSelector);
-    this.bindEvents();
-  }
+    constructor(tabSelector, contentSelector, sectionManager) {
+        this.tabElements = document.querySelectorAll(tabSelector);
+        this.contentElements = document.querySelectorAll(contentSelector);
+        this.sectionManager = sectionManager;
+        this.bindEvents();
+        this.switchTab(document.querySelector('.rightTab.active'));
+    }
 
-  bindEvents() {
-    this.tabElements.forEach(button => {
-      button.addEventListener("click", () => {
-        this.switchTab(button);
-      });
-    });
-  }
+    bindEvents() {
+        this.tabElements.forEach(button => {
+            button.addEventListener("click", () => {
+                this.switchTab(button);
+            });
+        });
+    }
 
-  switchTab(button) {
-    // Remove active class from all tabs
-    this.tabElements.forEach(tab => tab.classList.remove("active"));
-    // Hide all tab contents
-    this.contentElements.forEach(content => content.style.display = "none");
-
-    // Activate the clicked tab
-    button.classList.add("active");
-    // Show the related content
-    document.getElementById(button.dataset.tab).style.display = "block";
-  }
+    switchTab(button) {
+        this.tabElements.forEach(tab => tab.classList.remove("active"));
+        this.contentElements.forEach(content => content.style.display = "none");
+        button.classList.add("active");
+        const contentElement = document.getElementById(button.dataset.tab);
+        if (contentElement) {
+            contentElement.style.display = "block";
+            this.sectionManager.switchSection(button.dataset.tab);
+        }
+    }
 }
 
 class NoteApp {
@@ -411,47 +365,52 @@ class NoteApp {
         this.printBtn = document.getElementById('printBtn');
         this.increaseFont = document.getElementById('increaseFont');
         this.decreaseFont = document.getElementById('decreaseFont');
-
-        // Managers
-        this.darkModeManager = new DarkModeManager("#darkModeToggle"); // ✅ NEW
+        
+        this.darkModeManager = new DarkModeManager("#darkModeToggle");
         this.keyboardManager = new KeyboardShortcutManager(this.note);
         this.lintingManager = new LintingManager(this.note, this.lineNumbers);
-        this.inputManager = new InputManager(this.note, this.keyboardManager, this.lintingManager);
+        this.sectionManager = new SectionManager();
+        this.tabManager = new TabManager(this.note, this.lineNumbers, this.sectionManager);
         this.fontManager = new FontManager(this.note, this.lineNumbers);
-        this.tabManager = new TabManager(this.note, this.lineNumbers);
-
+        this.aiTabs = new AiTabs(".rightTab", ".rightTabContent", this.sectionManager);
         this.bindEvents();
     }
 
     bindEvents() {
-        this.note.addEventListener('input', () => this.inputManager.handleInput());
-        this.note.addEventListener('paste', (e) => this.inputManager.handlePaste(e));
-        this.note.addEventListener('drop', (e) => this.inputManager.handleDrop(e));
+        this.note.addEventListener('input', () => {
+            this.keyboardManager.saveState();
+            this.tabManager.saveCurrentTabContent();
+            this.lintingManager.updateLineNumbers();
+        });
+        this.note.addEventListener('paste', (e) => this.pasteHandler(e));
+        this.note.addEventListener('drop', (e) => this.dropHandler(e));
         this.note.addEventListener('keydown', (e) => this.keyboardManager.handleKeyboardShortcuts(e));
 
-        this.downloadBtn.addEventListener('click', () => this.download());
-        this.printBtn.addEventListener('click', () => {
-            const noteContent = this.note.innerText;
-
-            const printWindow = window.open('', '_blank');
-            const body = printWindow.document.body;
-
-            const pre = printWindow.document.createElement('pre');
-            pre.textContent = noteContent;
-
-            body.appendChild(pre);
-
-            printWindow.focus();
-            printWindow.print();
-            printWindow.close();
-        });
         this.increaseFont.addEventListener('click', () => this.fontManager.adjustFontSize(2));
         this.decreaseFont.addEventListener('click', () => this.fontManager.adjustFontSize(-2));
         this.increaseFont.addEventListener('mousedown', () => this.fontManager.startIncrease());
         this.decreaseFont.addEventListener('mousedown', () => this.fontManager.startDecrease());
         document.addEventListener('mouseup', () => this.fontManager.stopFontChange());
 
+        this.downloadBtn.addEventListener('click', () => this.download());
+        this.printBtn.addEventListener('click', () => this.print());
         this.lintingManager.syncScrolling();
+    }
+
+    pasteHandler(event) {
+        event.preventDefault();
+        const plainText = (event.clipboardData || window.clipboardData).getData('text');
+        document.execCommand('insertText', false, plainText);
+        this.keyboardManager.saveState();
+        this.tabManager.saveCurrentTabContent();
+    }
+    
+    dropHandler(event) {
+        event.preventDefault();
+        const plainText = event.dataTransfer.getData('text');
+        document.execCommand('insertText', false, plainText);
+        this.keyboardManager.saveState();
+        this.tabManager.saveCurrentTabContent();
     }
 
     download() {
@@ -464,12 +423,96 @@ class NoteApp {
         a.click();
         URL.revokeObjectURL(url);
     }
+
+    print() {
+        const noteContent = this.note.innerText;
+        const printWindow = window.open('', '_blank');
+        const body = printWindow.document.body;
+        const pre = printWindow.document.createElement('pre');
+        pre.textContent = noteContent;
+        body.appendChild(pre);
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+    }
+}
+
+class SectionManager {
+    constructor() {
+        this.currentSectionElement = null;
+        this.currentNoteId = null;
+        this.activeSection = null;
+        this.aiNoteElements = document.querySelectorAll('.ai-note');
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        this.aiNoteElements.forEach(element => {
+            element.addEventListener('input', () => {
+                this.saveSectionContent();
+            });
+        });
+    }
+
+    setNoteId(noteId) {
+        this.currentNoteId = noteId;
+        this.loadSectionContent(this.activeSection);
+    }
+
+    switchSection(section) {
+        this.activeSection = section;
+        const newSectionElement = document.querySelector(`.rightTabContent#${section} .ai-note`);
+        
+        if (!newSectionElement) {
+            console.error(`Could not find contenteditable div for section: ${section}`);
+            return;
+        }
+
+        this.currentSectionElement = newSectionElement;
+        this.loadSectionContent(section);
+    }
+
+    saveSectionContent() {
+        if (!this.currentNoteId || !this.currentSectionElement || !this.activeSection) return;
+        
+        const key = `${this.currentNoteId}-${this.activeSection}`;
+        const content = this.currentSectionElement.innerText;
+        StorageManager.saveToLocalStorage(key, content);
+    }
+
+    loadSectionContent(section) {
+        if (!this.currentNoteId || !section) return;
+        
+        const key = `${this.currentNoteId}-${section}`;
+        const content = StorageManager.getFromLocalStorage(key, '');
+        
+        const element = document.querySelector(`.rightTabContent#${section} .ai-note`);
+        if (element) {
+            element.innerText = content;
+            element.focus();
+            this.placeCursorAtEnd(element);
+        }
+    }
+    
+    // New method to clear content
+    clearContent(noteId) {
+        if (this.currentNoteId === noteId) {
+            if (this.currentSectionElement) {
+                this.currentSectionElement.innerText = '';
+            }
+        }
+    }
+
+    placeCursorAtEnd(element) {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        range.collapse(false);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
     new NoteApp();
-    new AiTabs(".rightTab", ".rightTabContent");
 });
-
-
-

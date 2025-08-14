@@ -116,17 +116,73 @@ body.dark-mode .rightPanel-tabs button.active { background-color: #555; color: #
   width: 250px; background: #f4f4f4; border-left: 1px solid #ccc;
   display: flex; flex-direction: column; position: fixed; top: 55px; right: 0; bottom: 65px; z-index: 1;
 }
-.rightPanel-tabs { display: flex; flex-direction: column; border-bottom: 1px solid #ccc; }
-.rightPanel-tabs button { background: none; border: none; padding: 10px; text-align: left; color: #333; cursor: pointer; }
-.rightPanel-tabs button.active { background: #ddd; font-weight: bold; }
-.rightPanel-content { flex: 1; overflow-y: auto; padding: 10px; }
-.rightTabContent { display: none; }
+.rightPanel-tabs { 
+  display: flex; 
+  flex-direction: column; 
+  border-bottom: 1px solid #ccc; 
+}
+.rightPanel-tabs button { 
+  background: none; 
+  border: none; 
+  padding: 10px; 
+  text-align: left; 
+  color: #333; 
+  cursor: pointer; 
+}
+.rightPanel-tabs button.active { 
+  background: #ddd; 
+  font-weight: bold; 
+}
+.rightPanel-content { 
+  flex: 1; 
+  overflow-y: auto; 
+  padding: 10px; 
+  /* Add these two properties to enable a flex layout for its children */
+  display: flex;
+  flex-direction: column;
+}
+.rightTabContent { 
+  display: none; 
+  /* This is a new rule to make the tab content fill the available space */
+  flex: 1;
+  display: flex;
+}
 
-.rightTabContent textarea {
+/* This is the corrected and new rule for the contenteditable divs */
+.rightTabContent .ai-note {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  border: 1px solid #ddd;
+  padding: 10px;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  overflow-y: auto;
+  outline: none;
+}
+/* New CSS to handle the placeholder styling for contenteditable divs */
+.rightTabContent .ai-note:empty:before {
+    content: attr(placeholder);
+    color: #aaa;
+}
+
+
+/* Remove the old textarea rule as it's no longer used */
+/* .rightTabContent textarea {
   width: 100%; height: calc(100vh - 350px);
   resize: none; border: 1px solid #ddd; padding: 10px; box-sizing: border-box;
   font-family: Arial, sans-serif; font-size: 16px;
-}
+} */
 
-#buttonWrapper { display: flex; justify-content: center; align-items: center; width: 100%; }
-#aiWriteButton, #settingsButton { margin-right: 5px; padding: 5px; }
+#buttonWrapper { 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  width: 100%;
+  padding-bottom: 5px;
+}
+#aiWriteButton, #settingsButton { 
+  margin-right: 5px; 
+  padding: 5px; 
+}
