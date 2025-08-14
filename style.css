@@ -104,11 +104,17 @@ body.dark-mode #printBtn:hover {
 }
 
 /* --- Main Layout --- */
+#appLayout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
 #container {
   display: flex;
-  width: 100%;
-  flex: 1;
-  margin-right: 250px;
+  flex: 1; /* This makes the main content take up the remaining space */
+  width: auto;
+  overflow: hidden;
 }
 
 #lineNumbers {
@@ -197,7 +203,6 @@ body.dark-mode #footer {
   padding: 8px 10px;
   background-color: #eef1f4;
   border-bottom: 1px solid var(--border-light);
-  margin-right: 250px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
 }
@@ -374,11 +379,8 @@ input:checked + .slider:before {
   border-left: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
-  position: fixed;
-  top: 55px;
-  right: 0;
-  bottom: 65px;
-  z-index: 100;
+  /* Removed fixed positioning to place it in the document flow */
+  position: relative;
   transition: background-color 0.3s, border-color 0.3s;
 }
 
