@@ -158,29 +158,32 @@ class TabManager {
     }
 
     closeTab(index) {
-        if (this.tabs.length <= 1) return;
-        
-        const tabToClose = this.tabs[index];
-
-        if (index === this.currentTabIndex) {
-            this.saveCurrentTabContent();
-            this.sectionManager.clearContent(tabToClose.id);
+        if (this.tabs.length <= 1) {
+            alert("Cannot delete the last tab.");
+            return;
         }
 
+        const tabToClose = this.tabs[index];
+
+        // Remove the tab and its content from the tabs array and storage
         this.tabs.splice(index, 1);
-        
         StorageManager.removeFromLocalStorage(tabToClose.id);
         ['summary', 'translation', 'grammar', 'rewriting'].forEach(section => {
             const key = `${tabToClose.id}-${section}`;
             StorageManager.removeFromLocalStorage(key);
         });
 
+        // Update the current tab index after removal
         if (this.currentTabIndex >= this.tabs.length) {
             this.currentTabIndex = this.tabs.length - 1;
         } else if (index < this.currentTabIndex) {
             this.currentTabIndex -= 1;
         }
 
+        // Crucial: Save the updated tab list to localStorage immediately
+        this.saveTabsToStorage();
+
+        // Re-render the tabs and switch to the new active tab
         this.renderTabs();
         this.switchTab(this.currentTabIndex);
     }
