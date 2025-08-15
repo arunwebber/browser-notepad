@@ -320,9 +320,56 @@ class TranslationManager {
         this.selectElement = document.getElementById('translationLanguageSelect');
         this.defaultLanguage = 'en';
         this.sectionManager = sectionManager;
-
+        
+        // Populate the language dropdown dynamically
+        this.populateLanguageSelect();
+        
         this.loadLanguage();
         this.bindEvents();
+    }
+    
+    // NEW: Method to dynamically populate the language dropdown
+    populateLanguageSelect() {
+        const languages = {
+            "Afrikaans": "af", "Albanian": "sq", "Amharic": "am", "Arabic": "ar", "Armenian": "hy",
+            "Assamese": "as", "Aymara": "ay", "Azerbaijani": "az", "Bambara": "bm", "Basque": "eu",
+            "Belarusian": "be", "Bengali": "bn", "Bhojpuri": "bho", "Bosnian": "bs", "Bulgarian": "bg",
+            "Burmese": "my", "Catalan": "ca", "Cebuano": "ceb", "Chichewa": "ny", "Chinese (Simplified)": "zh-Hans",
+            "Chinese (Traditional)": "zh-Hant", "Corsican": "co", "Croatian": "hr", "Czech": "cs", "Danish": "da",
+            "Dhivehi": "dv", "Dogri": "doi", "Dutch": "nl", "English": "en", "Esperanto": "eo",
+            "Estonian": "et", "Ewe": "ee", "Filipino": "fil", "Finnish": "fi", "French": "fr",
+            "Frisian": "fy", "Galician": "gl", "Georgian": "ka", "German": "de", "Greek": "el",
+            "Guarani": "gn", "Gujarati": "gu", "Haitian Creole": "ht", "Hausa": "ha", "Hawaiian": "haw",
+            "Hebrew": "he", "Hindi": "hi", "Hmong": "hmn", "Hungarian": "hu", "Icelandic": "is",
+            "Igbo": "ig", "Iloko": "ilo", "Indonesian": "id", "Irish": "ga", "Italian": "it",
+            "Japanese": "ja", "Javanese": "jw", "Kannada": "kn", "Kazakh": "kk", "Khmer": "km",
+            "Kinyarwanda": "rw", "Konkani": "gom", "Korean": "ko", "Krio": "kri", "Kurdish": "ku",
+            "Kyrgyz": "ky", "Lao": "lo", "Latin": "la", "Latvian": "lv", "Lingala": "ln",
+            "Lithuanian": "lt", "Luganda": "lg", "Luxembourgish": "lb", "Macedonian": "mk", "Maithili": "mai",
+            "Malagasy": "mg", "Malay": "ms", "Malayalam": "ml", "Maltese": "mt", "Maori": "mi",
+            "Marathi": "mr", "Meiteilon (Manipuri)": "mni-Mtei", "Mizo": "lus", "Mongolian": "mn", "Nepali": "ne",
+            "Norwegian": "no", "Odia (Oriya)": "or", "Oromo": "om", "Pashto": "ps", "Persian": "fa",
+            "Polish": "pl", "Portuguese": "pt", "Punjabi": "pa", "Quechua": "qu", "Romanian": "ro",
+            "Russian": "ru", "Samoan": "sm", "Sanskrit": "sa", "Scots Gaelic": "gd", "Sepedi": "nso",
+            "Serbian": "sr", "Sesotho": "st", "Shona": "sn", "Sindhi": "sd", "Sinhala": "si",
+            "Slovak": "sk", "Slovenian": "sl", "Somali": "so", "Spanish": "es", "Sundanese": "su",
+            "Swahili": "sw", "Swedish": "sv", "Tagalog": "tl", "Tajik": "tg", "Tamil": "ta",
+            "Tatar": "tt", "Telugu": "te", "Thai": "th", "Tigrinya": "ti", "Tsonga": "ts",
+            "Turkish": "tr", "Turkmen": "tk", "Twi": "ak", "Ukrainian": "uk", "Urdu": "ur",
+            "Uyghur": "ug", "Uzbek": "uz", "Vietnamese": "vi", "Welsh": "cy", "Xhosa": "xh",
+            "Yiddish": "yi", "Yoruba": "yo", "Zulu": "zu"
+        };
+    
+        // Clear existing options
+        this.selectElement.innerHTML = '';
+    
+        // Add the new options
+        for (const [name, code] of Object.entries(languages)) {
+            const option = document.createElement('option');
+            option.value = code;
+            option.textContent = name;
+            this.selectElement.appendChild(option);
+        }
     }
 
     bindEvents() {
@@ -402,8 +449,7 @@ class ApiKeyManager {
   }
 }
 
-
-
+// SectionManager Class: Manages content for AI tabs and communication with the API
 class SectionManager {
     constructor() {
         this.currentSectionElement = null;
@@ -509,20 +555,14 @@ class SectionManager {
                     return;
             }
             
-            console.log(`Making API call to: ${apiPath}`);
-            console.log("Request Body:", requestBody);
-
             const response = await this.callSharpApi('POST', apiPath, apiKey, requestBody);
             
-            console.log("Initial API Response:", response);
-
             if (response.status_url) {
                 this.currentSectionElement.innerText = 'Job accepted. Waiting for result...';
                 this.pollForStatus(response.status_url, apiKey);
             }
 
         } catch (error) {
-            console.error("Error in handleAiWrite:", error);
             this.currentSectionElement.innerText = `Error: ${error.message}`;
         }
     }
@@ -533,14 +573,11 @@ class SectionManager {
 
         if (retries >= maxRetries) {
             this.currentSectionElement.innerText = 'Job timed out. Please try again.';
-            console.error("Polling timed out after max retries.");
             return;
         }
         
         try {
-            console.log(`Polling status URL (${retries + 1}/${maxRetries}): ${statusUrl}`);
             const response = await this.callSharpApi('GET', statusUrl, apiKey);
-            console.log("Polling Response:", response);
 
             if (response.data.attributes.status === 'completed' || response.data.attributes.status === 'success') {
                 const result = JSON.parse(response.data.attributes.result);
@@ -570,14 +607,12 @@ class SectionManager {
                 return;
             } else if (response.data.attributes.status === 'failed') {
                 this.currentSectionElement.innerText = `Job failed: ${response.data.attributes.message || 'Unknown error'}`;
-                console.error("Polling job failed:", response.data.attributes.message);
                 return;
             }
             
             this.pollingTimeout = setTimeout(() => this.pollForStatus(statusUrl, apiKey, retries + 1), pollInterval);
 
         } catch (error) {
-            console.error("Polling failed:", error);
             this.currentSectionElement.innerText = `Polling failed: ${error.message}`;
         }
     }
@@ -613,13 +648,11 @@ class SectionManager {
             const result = await response.json();
 
             if (!response.ok && response.status !== 202) {
-                console.error(`API Call failed with status ${response.status}:`, result.message);
                 throw new Error(result.message || `API call failed with status ${response.status}`);
             }
             
             return result;
         } catch (error) {
-            console.error("Fetch or parsing error:", error);
             throw error;
         }
     }

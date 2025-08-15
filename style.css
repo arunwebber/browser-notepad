@@ -48,14 +48,38 @@ body.dark-mode #header {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+#titleAndDisclaimer {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  align-items: flex-start;
+  margin-left: 20px;
+}
+
 #title {
-  font-size: 20px;
+  font-size: 30px;
   font-weight: 600;
   color: var(--text-light);
+  margin-bottom: 5px;
 }
 
 body.dark-mode #title {
   color: var(--text-dark);
+}
+
+.disclaimer {
+  font-size: 1em;
+  color: #888;
+  margin: 0;
+}
+
+body.dark-mode .disclaimer {
+  color: #ccc;
+}
+
+#fontControls {
+  flex-shrink: 0;
+  margin-left: 20px;
 }
 
 #fontControls button,
@@ -112,7 +136,7 @@ body.dark-mode #printBtn:hover {
 
 #container {
   display: flex;
-  flex: 1; /* This makes the main content take up the remaining space */
+  flex: 1;
   width: auto;
   overflow: hidden;
 }
@@ -151,7 +175,7 @@ body.dark-mode #lineNumbers {
   line-height: 1.6;
   white-space: pre-wrap;
   word-wrap: break-word;
-  padding-right: 15px; /* Spacing for scrollbar */
+  padding-right: 15px;
 }
 
 #note:empty:before {
@@ -498,12 +522,12 @@ body.dark-mode #buttonWrapper {
 #translationLanguageSelect {
   width: 100%;
   padding: 8px;
-  margin-bottom: 15px; /* Add some space below the dropdown */
+  margin-bottom: 15px;
   border: 1px solid var(--border-light);
   border-radius: 6px;
   background-color: white;
   font-size: 15px;
-  -webkit-appearance: none; /* Remove default browser styling */
+  -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
   background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007bff%22%20d%3D%22M287%20197.8L151.4%2035.2c-4.4-4.8-10.9-7.7-17.8-7.7s-13.4%202.9-17.8%207.7L5.4%20197.8c-7.2%207.6-7.2%2019.9%200%2027.5%203.6%203.8%208.5%205.8%2013.4%205.8%204.9%200%209.8-2%2013.4-5.8L142.6%2095.4l110.4%20119.9c3.6%203.8%208.5%205.8%2013.4%205.8s9.8-2%2013.4-5.8c7.2-7.6%207.2-19.9%200-27.5z%22%2F%3E%3C%2Fsvg%3E');
@@ -513,7 +537,6 @@ body.dark-mode #buttonWrapper {
   cursor: pointer;
 }
 
-/* Dark mode styling */
 body.dark-mode #translationLanguageSelect {
   background-color: var(--element-bg-dark);
   border-color: var(--border-dark);
@@ -521,9 +544,9 @@ body.dark-mode #translationLanguageSelect {
   background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23fff%22%20d%3D%22M287%20197.8L151.4%2035.2c-4.4-4.8-10.9-7.7-17.8-7.7s-13.4%202.9-17.8%207.7L5.4%20197.8c-7.2%207.6-7.2%2019.9%200%2027.5%203.6%203.8%208.5%205.8%2013.4%205.8%204.9%200%209.8-2%2013.4-5.8L142.6%2095.4l110.4%20119.9c3.6%203.8%208.5%205.8%2013.4%205.8s9.8-2%2013.4-5.8c7.2-7.6%207.2-19.9%200-27.5z%22%2F%3E%3C%2Fsvg%3E');
 }
 
-/* Modal Overlay - Hides the popup by default */
+/* --- Modal Overlay - Hides the popup by default --- */
 .modal-overlay {
-  display: none; /* Initially hidden */
+  display: none;
   position: fixed;
   top: 0;
   left: 0;
@@ -535,7 +558,7 @@ body.dark-mode #translationLanguageSelect {
   align-items: center;
 }
 
-/* Modal Content - The actual popup box */
+/* --- Modal Content - The actual popup box --- */
 .modal-content {
   background-color: var(--bg-light);
   padding: 30px;
@@ -546,7 +569,6 @@ body.dark-mode #translationLanguageSelect {
   transition: background-color 0.3s;
 }
 
-/* Dark mode for the modal */
 body.dark-mode .modal-content {
   background-color: var(--element-bg-dark);
 }
