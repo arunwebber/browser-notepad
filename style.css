@@ -82,30 +82,51 @@ body.dark-mode .disclaimer {
   margin-left: 20px;
 }
 
-#fontControls button,
-#aiWriteButton,
-#settingsButton,
+/* Updated styles for download, print, and zoom buttons (remain blue) */
 #downloadBtn,
-#printBtn {
+#printBtn,
+#fontControls button {
   cursor: pointer;
   touch-action: manipulation;
   min-width: 32px;
   min-height: 32px;
   padding: 6px 12px;
   font-size: 16px;
-  border: 1px solid var(--border-light);
-  background-color: #ffffff;
-  color: var(--text-light);
+  border: 1px solid var(--primary-color);
+  background-color: var(--primary-color);
+  color: white;
   border-radius: 6px;
   transition: background-color 0.2s, color 0.2s, border-color 0.2s, transform 0.1s;
 }
 
-#fontControls button:hover,
-#aiWriteButton:hover,
-#settingsButton:hover,
 #downloadBtn:hover,
-#printBtn:hover {
-  background-color: #f0f0f0;
+#printBtn:hover,
+#fontControls button:hover {
+  background-color: #0069d9;
+  border-color: #0069d9;
+  transform: translateY(-1px);
+}
+
+/* New styles for AI Write and Settings buttons (now green) */
+#aiWriteButton,
+#settingsButton {
+  cursor: pointer;
+  touch-action: manipulation;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 16px;
+  border: 1px solid var(--secondary-color);
+  background-color: var(--secondary-color);
+  color: white;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, transform 0.1s;
+}
+
+#aiWriteButton:hover,
+#settingsButton:hover {
+  background-color: #218838;
+  border-color: #218838;
   transform: translateY(-1px);
 }
 
@@ -240,8 +261,8 @@ body.dark-mode #tab-bar {
   display: flex;
   flex: 1;
   gap: 6px;
-  flex-wrap: nowrap; /* Prevents tabs from wrapping */
-  overflow: hidden; /* Hides any overflowing content */
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 #tabContainer::-webkit-scrollbar {
@@ -249,9 +270,9 @@ body.dark-mode #tab-bar {
 }
 
 .tab {
-  flex-shrink: 1; /* Allows tabs to shrink */
-  flex-grow: 1; /* Allows tabs to grow */
-  min-width: 0; /* Allows them to shrink to 0 if needed (essential for this behavior) */
+  flex-shrink: 1;
+  flex-grow: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
