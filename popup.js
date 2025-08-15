@@ -402,6 +402,8 @@ class ApiKeyManager {
   }
 }
 
+
+
 class SectionManager {
     constructor() {
         this.currentSectionElement = null;
@@ -497,8 +499,10 @@ class SectionManager {
                     apiPath = '/v1/content/proofread';
                     break;
                 case 'rewriting':
-                    // CORRECTED: The rewriting API uses the 'paraphrase' endpoint
                     apiPath = '/v1/content/paraphrase';
+                    break;
+                case 'keywords':
+                    apiPath = '/v1/content/keywords';
                     break;
                 default:
                     this.currentSectionElement.innerText = 'Function not implemented for this section.';
@@ -539,18 +543,24 @@ class SectionManager {
             console.log("Polling Response:", response);
 
             if (response.data.attributes.status === 'completed' || response.data.attributes.status === 'success') {
-                const resultJson = JSON.parse(response.data.attributes.result);
+                const result = JSON.parse(response.data.attributes.result);
                 
                 let finalResult = 'No result found.';
                 if (this.activeSection === 'summary') {
-                    finalResult = resultJson.summary || 'No summary found.';
+                    finalResult = result.summary || 'No summary found.';
                 } else if (this.activeSection === 'translation') {
-                    finalResult = resultJson.content || 'No translation found.';
+                    finalResult = result.content || 'No translation found.';
                 } else if (this.activeSection === 'grammar') {
-                    finalResult = resultJson.proofread || 'No proofread result found.';
+                    finalResult = result.proofread || 'No proofread result found.';
                 } else if (this.activeSection === 'rewriting') {
-                    // CORRECTED: The rewriting API uses the 'paraphrase' key
-                    finalResult = resultJson.paraphrase || 'No rewritten text found.';
+                    finalResult = result.paraphrase || 'No rewritten text found.';
+                } else if (this.activeSection === 'keywords') {
+                    // CORRECTED: Check if the result is an array before joining it
+                    if (Array.isArray(result)) {
+                        finalResult = result.join(', ');
+                    } else {
+                        finalResult = 'No keywords found.';
+                    }
                 }
 
                 this.setContent(this.currentSectionElement, finalResult);
