@@ -483,25 +483,34 @@ class SectionManager {
 
         try {
             let apiPath;
+            let requestBody = { content: noteContent };
+
             switch (this.activeSection) {
                 case 'summary':
                     apiPath = '/v1/content/summarize';
                     break;
                 case 'translation':
                     apiPath = '/v1/content/translate';
+                    requestBody.language = this.translationManager.getSelectedLanguage();
                     break;
                 case 'grammar':
-                    apiPath = '/v1/content/grammar-correct';
+                    apiPath = '/v1/content/proofread';
                     break;
                 case 'rewriting':
-                    apiPath = '/v1/content/rewrite';
+                    // CORRECTED: The rewriting API uses the 'paraphrase' endpoint
+                    apiPath = '/v1/content/paraphrase';
                     break;
                 default:
                     this.currentSectionElement.innerText = 'Function not implemented for this section.';
                     return;
             }
             
-            const response = await this.callSharpApi('POST', apiPath, apiKey, { content: noteContent });
+            console.log(`Making API call to: ${apiPath}`);
+            console.log("Request Body:", requestBody);
+
+            const response = await this.callSharpApi('POST', apiPath, apiKey, requestBody);
+            
+            console.log("Initial API Response:", response);
 
             if (response.status_url) {
                 this.currentSectionElement.innerText = 'Job accepted. Waiting for result...';
@@ -509,6 +518,7 @@ class SectionManager {
             }
 
         } catch (error) {
+            console.error("Error in handleAiWrite:", error);
             this.currentSectionElement.innerText = `Error: ${error.message}`;
         }
     }
@@ -519,15 +529,29 @@ class SectionManager {
 
         if (retries >= maxRetries) {
             this.currentSectionElement.innerText = 'Job timed out. Please try again.';
+            console.error("Polling timed out after max retries.");
             return;
         }
         
         try {
+            console.log(`Polling status URL (${retries + 1}/${maxRetries}): ${statusUrl}`);
             const response = await this.callSharpApi('GET', statusUrl, apiKey);
+            console.log("Polling Response:", response);
 
             if (response.data.attributes.status === 'completed' || response.data.attributes.status === 'success') {
                 const resultJson = JSON.parse(response.data.attributes.result);
-                const finalResult = resultJson.summary || 'No summary found.';
+                
+                let finalResult = 'No result found.';
+                if (this.activeSection === 'summary') {
+                    finalResult = resultJson.summary || 'No summary found.';
+                } else if (this.activeSection === 'translation') {
+                    finalResult = resultJson.content || 'No translation found.';
+                } else if (this.activeSection === 'grammar') {
+                    finalResult = resultJson.proofread || 'No proofread result found.';
+                } else if (this.activeSection === 'rewriting') {
+                    // CORRECTED: The rewriting API uses the 'paraphrase' key
+                    finalResult = resultJson.paraphrase || 'No rewritten text found.';
+                }
 
                 this.setContent(this.currentSectionElement, finalResult);
                 const cacheKey = `${this.activeSection}-${this.currentNoteId}-${finalResult}`;
@@ -536,17 +560,18 @@ class SectionManager {
                 return;
             } else if (response.data.attributes.status === 'failed') {
                 this.currentSectionElement.innerText = `Job failed: ${response.data.attributes.message || 'Unknown error'}`;
+                console.error("Polling job failed:", response.data.attributes.message);
                 return;
             }
             
             this.pollingTimeout = setTimeout(() => this.pollForStatus(statusUrl, apiKey, retries + 1), pollInterval);
 
         } catch (error) {
+            console.error("Polling failed:", error);
             this.currentSectionElement.innerText = `Polling failed: ${error.message}`;
         }
     }
     
-    // NEW Helper function to safely set content and preserve undo history
     setContent(element, newText) {
         element.focus();
         document.execCommand('selectAll', false, null);
@@ -573,14 +598,20 @@ class SectionManager {
             redirect: "follow"
         };
         
-        const response = await fetch(url, requestOptions);
-        const result = await response.json();
+        try {
+            const response = await fetch(url, requestOptions);
+            const result = await response.json();
 
-        if (response.status >= 400 && response.status !== 202) {
-             throw new Error(result.message || `API call failed with status ${response.status}`);
+            if (!response.ok && response.status !== 202) {
+                console.error(`API Call failed with status ${response.status}:`, result.message);
+                throw new Error(result.message || `API call failed with status ${response.status}`);
+            }
+            
+            return result;
+        } catch (error) {
+            console.error("Fetch or parsing error:", error);
+            throw error;
         }
-        
-        return result;
     }
 
     saveSectionContent() {
@@ -596,7 +627,6 @@ class SectionManager {
         StorageManager.saveToLocalStorage(key, content);
     }
 
-    // CHANGED: Use the new setContent method
     loadSectionContent(section) {
         if (!this.currentNoteId || !section) return;
         
