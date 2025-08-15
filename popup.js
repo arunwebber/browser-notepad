@@ -491,7 +491,6 @@ class SectionManager {
         const newSectionElement = document.querySelector(`.rightTabContent#${section} .ai-note`);
         
         if (!newSectionElement) {
-            console.error(`Could not find contenteditable div for section: ${section}`);
             return;
         }
 
@@ -507,7 +506,6 @@ class SectionManager {
         }
 
         const apiKey = StorageManager.getFromLocalStorage('apiKey');
-        console.log('API Key retrieved from local storage:', apiKey);
         if (!apiKey) {
             this.apiKeyManager.showModal();
             return;
@@ -521,7 +519,6 @@ class SectionManager {
         
         const cacheKey = `${this.activeSection}-${this.currentNoteId}-${noteContent}`;
         if (this.apiCache[cacheKey]) {
-            console.log('Using cached result for:', this.activeSection);
             this.currentSectionElement.innerText = this.apiCache[cacheKey];
             this.saveSectionContent();
             return;
@@ -557,7 +554,6 @@ class SectionManager {
             }
 
         } catch (error) {
-            console.error('API Error:', error);
             this.currentSectionElement.innerText = `Error: ${error.message}`;
         }
     }
@@ -571,13 +567,9 @@ class SectionManager {
             return;
         }
         
-        console.log(`Polling status URL: ${statusUrl} (Retry ${retries + 1}/${maxRetries})`);
-
         try {
             const response = await this.callSharpApi('GET', statusUrl, apiKey);
-            console.log('Poll Response:', response);
 
-            // CHANGED: Check for 'completed' or 'success' status
             if (response.data.attributes.status === 'completed' || response.data.attributes.status === 'success') {
                 const resultJson = JSON.parse(response.data.attributes.result);
                 const finalResult = resultJson.summary || 'No summary found.';
@@ -595,7 +587,6 @@ class SectionManager {
             this.pollingTimeout = setTimeout(() => this.pollForStatus(statusUrl, apiKey, retries + 1), pollInterval);
 
         } catch (error) {
-            console.error('Polling Error:', error);
             this.currentSectionElement.innerText = `Polling failed: ${error.message}`;
         }
     }
@@ -603,13 +594,6 @@ class SectionManager {
     async callSharpApi(method, path, apiKey, body = null) {
         const url = path.startsWith('http') ? path : `https://sharpapi.com/api${path}`;
         
-        console.log('Starting API call...');
-        console.log('Method:', method);
-        console.log('URL:', url);
-        if (body) {
-            console.log('Request Body:', body);
-        }
-
         const headers = new Headers();
         headers.append("Accept", "application/json");
         headers.append("Authorization", `Bearer ${apiKey}`);
@@ -626,10 +610,7 @@ class SectionManager {
         };
         
         const response = await fetch(url, requestOptions);
-        console.log('Response Status:', response.status);
-        
         const result = await response.json();
-        console.log('Response Body:', result);
 
         if (response.status >= 400 && response.status !== 202) {
              throw new Error(result.message || `API call failed with status ${response.status}`);
