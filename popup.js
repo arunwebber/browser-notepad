@@ -45,51 +45,6 @@ class FontManager {
   }
 }
 
-// KeyboardShortcutManager Class: Handles undo and redo functionality via keyboard shortcuts
-class KeyboardShortcutManager {
-  constructor(noteElement) {
-    this.noteElement = noteElement;
-    this.undoStack = [];
-    this.redoStack = [];
-  }
-
-  saveState() {
-    this.undoStack.push(this.noteElement.innerText);
-    if (this.undoStack.length > 50) {
-      this.undoStack.shift();
-    }
-    this.redoStack = [];
-  }
-
-  undo() {
-    if (this.undoStack.length > 0) {
-      const lastState = this.undoStack.pop();
-      this.redoStack.push(this.noteElement.innerText);
-      this.noteElement.innerText = lastState;
-    }
-  }
-
-  redo() {
-    if (this.redoStack.length > 0) {
-      const lastState = this.redoStack.pop();
-      this.undoStack.push(this.noteElement.innerText);
-      this.noteElement.innerText = lastState;
-    }
-  }
-
-  handleKeyboardShortcuts(event) {
-    if (event.ctrlKey) {
-      if (event.key === 'z' || event.key === 'Z') {
-        event.preventDefault();
-        this.undo();
-      } else if (event.key === 'y' || event.key === 'Y') {
-        event.preventDefault();
-        this.redo();
-      }
-    }
-  }
-}
-
 // LintingManager Class: Handles various linting tasks like line numbers, highlighting, etc.
 class LintingManager {
   constructor(noteElement, lineNumbersElement) {
@@ -175,6 +130,7 @@ class TabManager {
         this.switchTab(this.tabs.length - 1);
     }
 
+    // CHANGED: Use a new method to set content to preserve undo history
     switchTab(index) {
         if (this.currentTabIndex === index) return;
 
@@ -182,8 +138,11 @@ class TabManager {
 
         this.currentTabIndex = index;
         const currentTab = this.tabs[this.currentTabIndex];
-        this.noteElement.innerText = StorageManager.getFromLocalStorage(currentTab.id, '');
+        const newContent = StorageManager.getFromLocalStorage(currentTab.id, '');
         
+        // This is a programmatic change, so we must manually handle it
+        this.noteElement.innerText = newContent;
+
         this.sectionManager.setNoteId(currentTab.id);
 
         this.updateLineNumbers();
@@ -401,7 +360,6 @@ class ApiKeyManager {
   }
 
   bindEvents() {
-    // The aiWriteBtn event listener is no longer here
     this.settingsBtn.addEventListener('click', () => {
       this.showModal();
     });
@@ -417,9 +375,6 @@ class ApiKeyManager {
       }
     });
   }
-
-  // The handleAiButtonClick method is no longer here
-  // The API key check and API call logic is now in SectionManager.handleAiWrite()
 
   showModal() {
     const existingKey = StorageManager.getFromLocalStorage('apiKey');
@@ -519,7 +474,7 @@ class SectionManager {
         
         const cacheKey = `${this.activeSection}-${this.currentNoteId}-${noteContent}`;
         if (this.apiCache[cacheKey]) {
-            this.currentSectionElement.innerText = this.apiCache[cacheKey];
+            this.setContent(this.currentSectionElement, this.apiCache[cacheKey]);
             this.saveSectionContent();
             return;
         }
@@ -574,7 +529,7 @@ class SectionManager {
                 const resultJson = JSON.parse(response.data.attributes.result);
                 const finalResult = resultJson.summary || 'No summary found.';
 
-                this.currentSectionElement.innerText = finalResult;
+                this.setContent(this.currentSectionElement, finalResult);
                 const cacheKey = `${this.activeSection}-${this.currentNoteId}-${finalResult}`;
                 this.apiCache[cacheKey] = finalResult;
                 this.saveSectionContent();
@@ -589,6 +544,15 @@ class SectionManager {
         } catch (error) {
             this.currentSectionElement.innerText = `Polling failed: ${error.message}`;
         }
+    }
+    
+    // NEW Helper function to safely set content and preserve undo history
+    setContent(element, newText) {
+        element.focus();
+        document.execCommand('selectAll', false, null);
+        document.execCommand('delete', false, null);
+        document.execCommand('insertText', false, newText);
+        this.placeCursorAtEnd(element);
     }
 
     async callSharpApi(method, path, apiKey, body = null) {
@@ -632,6 +596,7 @@ class SectionManager {
         StorageManager.saveToLocalStorage(key, content);
     }
 
+    // CHANGED: Use the new setContent method
     loadSectionContent(section) {
         if (!this.currentNoteId || !section) return;
         
@@ -645,21 +610,20 @@ class SectionManager {
         
         const element = document.querySelector(`.rightTabContent#${section} .ai-note`);
         if (element) {
-            element.innerText = content;
-            element.focus();
-            this.placeCursorAtEnd(element);
+            this.setContent(element, content);
         }
     }
     
     clearContent(noteId) {
         if (this.currentNoteId === noteId) {
             if (this.currentSectionElement) {
-                this.currentSectionElement.innerText = '';
+                this.setContent(this.currentSectionElement, '');
             }
         }
     }
 
     placeCursorAtEnd(element) {
+        element.focus();
         const range = document.createRange();
         range.selectNodeContents(element);
         range.collapse(false);
@@ -679,7 +643,7 @@ class NoteApp {
         this.decreaseFont = document.getElementById('decreaseFont');
         
         this.darkModeManager = new DarkModeManager("#darkModeToggle");
-        this.keyboardManager = new KeyboardShortcutManager(this.note);
+        // Removed KeyboardShortcutManager
         this.lintingManager = new LintingManager(this.note, this.lineNumbers);
         this.sectionManager = new SectionManager();
         this.tabManager = new TabManager(this.note, this.lineNumbers, this.sectionManager);
@@ -698,13 +662,12 @@ class NoteApp {
 
     bindEvents() {
         this.note.addEventListener('input', () => {
-            this.keyboardManager.saveState();
             this.tabManager.saveCurrentTabContent();
             this.lintingManager.updateLineNumbers();
         });
+        
         this.note.addEventListener('paste', (e) => this.pasteHandler(e));
         this.note.addEventListener('drop', (e) => this.dropHandler(e));
-        this.note.addEventListener('keydown', (e) => this.keyboardManager.handleKeyboardShortcuts(e));
 
         this.increaseFont.addEventListener('click', () => this.fontManager.adjustFontSize(2));
         this.decreaseFont.addEventListener('click', () => this.fontManager.adjustFontSize(-2));
@@ -716,7 +679,6 @@ class NoteApp {
         this.printBtn.addEventListener('click', () => this.print());
         this.lintingManager.syncScrolling();
         
-        // CORRECTED: The AI button now calls the method on SectionManager
         document.getElementById('aiWriteButton').addEventListener('click', () => {
             this.sectionManager.handleAiWrite();
         });
@@ -726,7 +688,6 @@ class NoteApp {
         event.preventDefault();
         const plainText = (event.clipboardData || window.clipboardData).getData('text');
         document.execCommand('insertText', false, plainText);
-        this.keyboardManager.saveState();
         this.tabManager.saveCurrentTabContent();
     }
     
@@ -734,7 +695,6 @@ class NoteApp {
         event.preventDefault();
         const plainText = event.dataTransfer.getData('text');
         document.execCommand('insertText', false, plainText);
-        this.keyboardManager.saveState();
         this.tabManager.saveCurrentTabContent();
     }
 
