@@ -50,6 +50,11 @@ class LintingManager {
   constructor(noteElement, lineNumbersElement) {
     this.noteElement = noteElement;
     this.lineNumbersElement = lineNumbersElement;
+    // Store a reference to the handler to allow removal later
+    this.scrollHandler = () => {
+      this.lineNumbersElement.scrollTop = this.noteElement.scrollTop;
+    };
+    this.syncScrolling();
   }
 
   updateLineNumbers() {
@@ -62,9 +67,12 @@ class LintingManager {
   }
 
   syncScrolling() {
-    this.noteElement.addEventListener('scroll', () => {
-      this.lineNumbersElement.scrollTop = this.noteElement.scrollTop;
-    });
+    this.noteElement.addEventListener('scroll', this.scrollHandler);
+  }
+
+  // Add this cleanup method
+  cleanup() {
+    this.noteElement.removeEventListener('scroll', this.scrollHandler);
   }
 }
 
@@ -95,7 +103,10 @@ class TabManager {
         this.addTabBtn = document.getElementById('addTabBtn');
 
         this.addTabBtn.addEventListener('click', () => this.createNewTab());
-        this.noteElement.addEventListener('scroll', () => this.syncScroll());
+
+        // Store a reference to the scroll handler to allow removal later
+        this.scrollHandler = () => this.syncScroll();
+        this.noteElement.addEventListener('scroll', this.scrollHandler);
 
         const savedTabs = StorageManager.getFromLocalStorage('tabs', null);
         const savedTabIndex = StorageManager.getFromLocalStorage('currentTabIndex', -1);
@@ -130,7 +141,6 @@ class TabManager {
         this.switchTab(this.tabs.length - 1);
     }
 
-    // CHANGED: Use a new method to set content to preserve undo history
     switchTab(index) {
         if (this.currentTabIndex === index) return;
 
@@ -140,7 +150,6 @@ class TabManager {
         const currentTab = this.tabs[this.currentTabIndex];
         const newContent = StorageManager.getFromLocalStorage(currentTab.id, '');
         
-        // This is a programmatic change, so we must manually handle it
         this.noteElement.innerText = newContent;
 
         this.sectionManager.setNoteId(currentTab.id);
@@ -166,7 +175,6 @@ class TabManager {
         const tabToClose = this.tabs[index];
         const wasActiveTab = (index === this.currentTabIndex);
 
-        // Remove the tab and its content from the tabs array and storage
         this.tabs.splice(index, 1);
         StorageManager.removeFromLocalStorage(tabToClose.id);
         ['summary', 'translation', 'grammar', 'rewriting', 'keywords'].forEach(section => {
@@ -174,32 +182,21 @@ class TabManager {
             StorageManager.removeFromLocalStorage(key);
         });
 
-        // Update the current tab index after removal
         if (wasActiveTab) {
-            // If we closed the active tab, we need to switch to another tab
             if (index >= this.tabs.length) {
-                // If we closed the last tab, switch to the new last tab
                 this.currentTabIndex = this.tabs.length - 1;
             } else {
-                // Otherwise, stay at the same index (which now contains the next tab)
                 this.currentTabIndex = index;
             }
         } else if (index < this.currentTabIndex) {
-            // If we closed a tab before the current one, adjust the index
             this.currentTabIndex -= 1;
         }
-        // If we closed a tab after the current one, currentTabIndex stays the same
 
-        // Save the updated tab list to localStorage immediately
         this.saveTabsToStorage();
-
-        // Re-render the tabs
         this.renderTabs();
         
-        // If we closed the active tab, switch to the new current tab
         if (wasActiveTab) {
-            // Force a fresh load of the content
-            this.currentTabIndex = -1; // Reset to force the switchTab to actually switch
+            this.currentTabIndex = -1;
             this.switchTab(index >= this.tabs.length ? this.tabs.length - 1 : index);
         }
     }
@@ -282,6 +279,12 @@ class TabManager {
         StorageManager.saveToLocalStorage('tabs', JSON.stringify(this.tabs));
         StorageManager.saveToLocalStorage('currentTabIndex', this.currentTabIndex);
     }
+    
+    cleanup() {
+        if (this.scrollHandler) {
+            this.noteElement.removeEventListener('scroll', this.scrollHandler);
+        }
+    }
 }
 
 class DarkModeManager {
@@ -347,7 +350,6 @@ class TranslationManager {
         this.bindEvents();
     }
     
-    // NEW: Method to dynamically populate the language dropdown
     populateLanguageSelect() {
         const languages = {
             "Afrikaans": "af", "Albanian": "sq", "Amharic": "am", "Arabic": "ar", "Armenian": "hy",
@@ -394,7 +396,6 @@ class TranslationManager {
     bindEvents() {
         this.selectElement.addEventListener('change', () => {
             this.saveLanguage();
-            // Inform the section manager to load new content
             this.sectionManager.loadSectionContent('translation');
         });
     }
@@ -539,7 +540,10 @@ class SectionManager {
             return;
         }
         
-        const cacheKey = `${this.activeSection}-${this.currentNoteId}-${noteContent}`;
+        // Use btoa() to create a safe, consistent cache key from the note content
+        const cacheKey = `${this.activeSection}-${this.currentNoteId}-${btoa(noteContent)}-${
+            this.activeSection === 'translation' ? this.translationManager.getSelectedLanguage() : ''}`;
+
         if (this.apiCache[cacheKey]) {
             this.setContent(this.currentSectionElement, this.apiCache[cacheKey]);
             this.saveSectionContent();
@@ -578,7 +582,7 @@ class SectionManager {
             
             if (response.status_url) {
                 this.currentSectionElement.innerText = 'Job accepted. Waiting for result...';
-                this.pollForStatus(response.status_url, apiKey);
+                this.pollForStatus(response.status_url, apiKey, cacheKey);
             }
 
         } catch (error) {
@@ -586,7 +590,7 @@ class SectionManager {
         }
     }
 
-    async pollForStatus(statusUrl, apiKey, retries = 0) {
+    async pollForStatus(statusUrl, apiKey, cacheKey, retries = 0) {
         const maxRetries = 10;
         const pollInterval = 3000;
 
@@ -611,7 +615,6 @@ class SectionManager {
                 } else if (this.activeSection === 'rewriting') {
                     finalResult = result.paraphrase || 'No rewritten text found.';
                 } else if (this.activeSection === 'keywords') {
-                    // CORRECTED: Check if the result is an array before joining it
                     if (Array.isArray(result)) {
                         finalResult = result.join(', ');
                     } else {
@@ -620,8 +623,7 @@ class SectionManager {
                 }
 
                 this.setContent(this.currentSectionElement, finalResult);
-                const cacheKey = `${this.activeSection}-${this.currentNoteId}-${finalResult}`;
-                this.apiCache[cacheKey] = finalResult;
+                this.apiCache[cacheKey] = finalResult; // Use the fixed cacheKey
                 this.saveSectionContent();
                 return;
             } else if (response.data.attributes.status === 'failed') {
@@ -629,7 +631,7 @@ class SectionManager {
                 return;
             }
             
-            this.pollingTimeout = setTimeout(() => this.pollForStatus(statusUrl, apiKey, retries + 1), pollInterval);
+            this.pollingTimeout = setTimeout(() => this.pollForStatus(statusUrl, apiKey, cacheKey, retries + 1), pollInterval);
 
         } catch (error) {
             this.currentSectionElement.innerText = `Polling failed: ${error.message}`;
@@ -726,92 +728,123 @@ class SectionManager {
 }
 
 class NoteApp {
-    constructor() {
-        this.note = document.getElementById('note');
-        this.lineNumbers = document.getElementById('lineNumbers');
-        this.downloadBtn = document.getElementById('downloadBtn');
-        this.printBtn = document.getElementById('printBtn');
-        this.increaseFont = document.getElementById('increaseFont');
-        this.decreaseFont = document.getElementById('decreaseFont');
-        
-        this.darkModeManager = new DarkModeManager("#darkModeToggle");
-        // Removed KeyboardShortcutManager
-        this.lintingManager = new LintingManager(this.note, this.lineNumbers);
-        this.sectionManager = new SectionManager();
-        this.tabManager = new TabManager(this.note, this.lineNumbers, this.sectionManager);
-        this.fontManager = new FontManager(this.note, this.lineNumbers);
-        this.aiTabs = new AiTabs(".rightTab", ".rightTabContent", this.sectionManager);
-        this.translationManager = new TranslationManager(this.sectionManager);
-        
-        this.apiKeyManager = new ApiKeyManager();
-        
-        // Connect the managers
-        this.sectionManager.setTranslationManager(this.translationManager);
-        this.sectionManager.setApiKeyManager(this.apiKeyManager);
-        
-        this.bindEvents();
-    }
+  constructor() {
+    this.note = document.getElementById('note');
+    this.lineNumbers = document.getElementById('lineNumbers');
+    this.downloadBtn = document.getElementById('downloadBtn');
+    this.printBtn = document.getElementById('printBtn');
+    this.increaseFont = document.getElementById('increaseFont');
+    this.decreaseFont = document.getElementById('decreaseFont');
 
-    bindEvents() {
-        this.note.addEventListener('input', () => {
-            this.tabManager.saveCurrentTabContent();
-            this.lintingManager.updateLineNumbers();
-        });
-        
-        this.note.addEventListener('paste', (e) => this.pasteHandler(e));
-        this.note.addEventListener('drop', (e) => this.dropHandler(e));
+    this.darkModeManager = new DarkModeManager("#darkModeToggle");
+    this.lintingManager = new LintingManager(this.note, this.lineNumbers);
+    this.sectionManager = new SectionManager();
+    this.tabManager = new TabManager(this.note, this.lineNumbers, this.sectionManager);
+    this.fontManager = new FontManager(this.note, this.lineNumbers);
+    this.aiTabs = new AiTabs(".rightTab", ".rightTabContent", this.sectionManager);
+    this.translationManager = new TranslationManager(this.sectionManager);
 
-        this.increaseFont.addEventListener('click', () => this.fontManager.adjustFontSize(2));
-        this.decreaseFont.addEventListener('click', () => this.fontManager.adjustFontSize(-2));
-        this.increaseFont.addEventListener('mousedown', () => this.fontManager.startIncrease());
-        this.decreaseFont.addEventListener('mousedown', () => this.fontManager.startDecrease());
-        document.addEventListener('mouseup', () => this.fontManager.stopFontChange());
+    this.apiKeyManager = new ApiKeyManager();
 
-        this.downloadBtn.addEventListener('click', () => this.download());
-        this.printBtn.addEventListener('click', () => this.print());
-        this.lintingManager.syncScrolling();
-        
-        document.getElementById('aiWriteButton').addEventListener('click', () => {
-            this.sectionManager.handleAiWrite();
-        });
-    }
+    this.sectionManager.setTranslationManager(this.translationManager);
+    this.sectionManager.setApiKeyManager(this.apiKeyManager);
 
-    pasteHandler(event) {
-        event.preventDefault();
-        const plainText = (event.clipboardData || window.clipboardData).getData('text');
-        document.execCommand('insertText', false, plainText);
-        this.tabManager.saveCurrentTabContent();
-    }
-    
-    dropHandler(event) {
-        event.preventDefault();
-        const plainText = event.dataTransfer.getData('text');
-        document.execCommand('insertText', false, plainText);
-        this.tabManager.saveCurrentTabContent();
-    }
+    // Store references to handlers before binding events
+    this.inputHandler = () => {
+      this.tabManager.saveCurrentTabContent();
+      this.lintingManager.updateLineNumbers();
+    };
+    this.pasteHandler = (e) => this.handlePaste(e);
+    this.dropHandler = (e) => this.handleDrop(e);
+    this.increaseFontClickHandler = () => this.fontManager.adjustFontSize(2);
+    this.decreaseFontClickHandler = () => this.fontManager.adjustFontSize(-2);
+    this.increaseFontMousedownHandler = () => this.fontManager.startIncrease();
+    this.decreaseFontMousedownHandler = () => this.fontManager.startDecrease();
+    this.mouseUpHandler = () => this.fontManager.stopFontChange();
+    this.downloadClickHandler = () => this.download();
+    this.printClickHandler = () => this.print();
+    this.aiWriteClickHandler = () => this.sectionManager.handleAiWrite();
 
-    download() {
-        const text = this.note.innerText;
-        const blob = new Blob([text], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `note-${new Date().toISOString()}.txt`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
+    this.bindEvents();
+  }
 
-    print() {
-        const noteContent = this.note.innerText;
-        const printWindow = window.open('', '_blank');
-        const body = printWindow.document.body;
-        const pre = printWindow.document.createElement('pre');
-        pre.textContent = noteContent;
-        body.appendChild(pre);
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-    }
+  // Refactored bindEvents to use the stored handlers
+  bindEvents() {
+    this.note.addEventListener('input', this.inputHandler);
+    this.note.addEventListener('paste', this.pasteHandler);
+    this.note.addEventListener('drop', this.dropHandler);
+
+    this.increaseFont.addEventListener('click', this.increaseFontClickHandler);
+    this.decreaseFont.addEventListener('click', this.decreaseFontClickHandler);
+    this.increaseFont.addEventListener('mousedown', this.increaseFontMousedownHandler);
+    this.decreaseFont.addEventListener('mousedown', this.decreaseFontMousedownHandler);
+    document.addEventListener('mouseup', this.mouseUpHandler);
+
+    this.downloadBtn.addEventListener('click', this.downloadClickHandler);
+    this.printBtn.addEventListener('click', this.printClickHandler);
+
+    document.getElementById('aiWriteButton').addEventListener('click', this.aiWriteClickHandler);
+  }
+
+  // New cleanup method
+  cleanup() {
+    this.note.removeEventListener('input', this.inputHandler);
+    this.note.removeEventListener('paste', this.pasteHandler);
+    this.note.removeEventListener('drop', this.dropHandler);
+
+    this.increaseFont.removeEventListener('click', this.increaseFontClickHandler);
+    this.decreaseFont.removeEventListener('click', this.decreaseFontClickHandler);
+    this.increaseFont.removeEventListener('mousedown', this.increaseFontMousedownHandler);
+    this.decreaseFont.removeEventListener('mousedown', this.decreaseFontMousedownHandler);
+    document.removeEventListener('mouseup', this.mouseUpHandler);
+
+    this.downloadBtn.removeEventListener('click', this.downloadClickHandler);
+    this.printBtn.removeEventListener('click', this.printClickHandler);
+
+    document.getElementById('aiWriteButton').removeEventListener('click', this.aiWriteClickHandler);
+
+    // Call cleanup methods for other managers
+    this.lintingManager.cleanup();
+    this.tabManager.cleanup();
+    this.fontManager.stopFontChange();
+  }
+
+  handlePaste(event) {
+    event.preventDefault();
+    const plainText = (event.clipboardData || window.clipboardData).getData('text');
+    document.execCommand('insertText', false, plainText);
+    this.tabManager.saveCurrentTabContent();
+  }
+
+  handleDrop(event) {
+    event.preventDefault();
+    const plainText = event.dataTransfer.getData('text');
+    document.execCommand('insertText', false, plainText);
+    this.tabManager.saveCurrentTabContent();
+  }
+
+  download() {
+    const text = this.note.innerText;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `note-${new Date().toISOString()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  print() {
+    const noteContent = this.note.innerText;
+    const printWindow = window.open('', '_blank');
+    const body = printWindow.document.body;
+    const pre = printWindow.document.createElement('pre');
+    pre.textContent = noteContent;
+    body.appendChild(pre);
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
