@@ -1,3 +1,48 @@
+// HistoryManager: Manages undo/redo stacks for a single tab's content.
+class HistoryManager {
+    constructor() {
+        this.past = [];
+        this.future = [];
+        this.current = '';
+        this.isNavigating = false;
+    }
+
+    // Records a new state. Clears the future stack if a new action occurs.
+    pushState(newState) {
+        if (this.isNavigating) {
+            this.isNavigating = false;
+            return;
+        }
+        if (this.current !== '' && this.current !== newState) {
+            this.past.push(this.current);
+        }
+        this.current = newState;
+        this.future = [];
+    }
+
+    // Reverts to a previous state
+    undo() {
+        if (this.past.length > 0) {
+            this.isNavigating = true;
+            this.future.unshift(this.current);
+            this.current = this.past.pop();
+            return this.current;
+        }
+        return null;
+    }
+
+    // Reapplies an undone state
+    redo() {
+        if (this.future.length > 0) {
+            this.isNavigating = true;
+            this.past.push(this.current);
+            this.current = this.future.shift();
+            return this.current;
+        }
+        return null;
+    }
+}
+
 // FontManager Class: Handles font size changes
 class FontManager {
   constructor(noteElement, lineNumbersElement) {
@@ -97,6 +142,7 @@ class TabManager {
         this.lineNumberElement = lineNumberElement;
         this.sectionManager = sectionManager;
         this.tabs = [];
+        this.tabHistories = {};
         this.currentTabIndex = -1;
 
         this.tabContainer = document.getElementById('tabContainer');
@@ -104,15 +150,21 @@ class TabManager {
 
         this.addTabBtn.addEventListener('click', () => this.createNewTab());
 
-        // Store a reference to the scroll handler to allow removal later
         this.scrollHandler = () => this.syncScroll();
         this.noteElement.addEventListener('scroll', this.scrollHandler);
+        
+        this.bindUndoRedo();
 
         const savedTabs = StorageManager.getFromLocalStorage('tabs', null);
         const savedTabIndex = StorageManager.getFromLocalStorage('currentTabIndex', -1);
 
         if (savedTabs) {
             this.tabs = JSON.parse(savedTabs);
+            this.tabs.forEach(tab => {
+                this.tabHistories[tab.id] = new HistoryManager();
+                const savedContent = StorageManager.getFromLocalStorage(tab.id, '');
+                this.tabHistories[tab.id].current = savedContent;
+            });
             this.renderTabs();
             const index = parseInt(savedTabIndex);
             if (index >= 0 && index < this.tabs.length) {
@@ -134,23 +186,25 @@ class TabManager {
         const tab = {
             id: tabId,
             title: `Note ${this.tabs.length + 1}`,
-            content: '',
         };
         this.tabs.push(tab);
+        this.tabHistories[tabId] = new HistoryManager();
         this.renderTabs();
         this.switchTab(this.tabs.length - 1);
     }
 
     switchTab(index) {
         if (this.currentTabIndex === index) return;
-
         this.saveCurrentTabContent();
 
         this.currentTabIndex = index;
         const currentTab = this.tabs[this.currentTabIndex];
-        const newContent = StorageManager.getFromLocalStorage(currentTab.id, '');
+        
+        const historyManager = this.tabHistories[currentTab.id];
+        const newContent = historyManager.current || StorageManager.getFromLocalStorage(currentTab.id, '');
         
         this.noteElement.innerText = newContent;
+        historyManager.current = newContent;
 
         this.sectionManager.setNoteId(currentTab.id);
 
@@ -163,7 +217,10 @@ class TabManager {
     saveCurrentTabContent() {
         if (this.currentTabIndex === -1) return;
         const currentTab = this.tabs[this.currentTabIndex];
-        StorageManager.saveToLocalStorage(currentTab.id, this.noteElement.innerText);
+        const currentContent = this.noteElement.innerText;
+        
+        StorageManager.saveToLocalStorage(currentTab.id, currentContent);
+        this.tabHistories[currentTab.id].pushState(currentContent);
     }
 
     closeTab(index) {
@@ -176,6 +233,9 @@ class TabManager {
         const wasActiveTab = (index === this.currentTabIndex);
 
         this.tabs.splice(index, 1);
+        
+        delete this.tabHistories[tabToClose.id];
+        
         StorageManager.removeFromLocalStorage(tabToClose.id);
         ['summary', 'translation', 'grammar', 'rewriting', 'keywords'].forEach(section => {
             const key = `${tabToClose.id}-${section}`;
@@ -198,6 +258,47 @@ class TabManager {
         if (wasActiveTab) {
             this.currentTabIndex = -1;
             this.switchTab(index >= this.tabs.length ? this.tabs.length - 1 : index);
+        }
+    }
+
+    bindUndoRedo() {
+        this.undoRedoHandler = (e) => {
+            if (e.target !== this.noteElement) return;
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                this.undo();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+                e.preventDefault();
+                this.redo();
+            }
+        };
+        document.addEventListener('keydown', this.undoRedoHandler);
+    }
+    
+    undo() {
+        if (this.currentTabIndex === -1) return;
+        const currentTabId = this.tabs[this.currentTabIndex].id;
+        const historyManager = this.tabHistories[currentTabId];
+
+        const previousState = historyManager.undo();
+        if (previousState !== null) {
+            this.noteElement.innerText = previousState;
+            this.updateLineNumbers();
+            this.placeCursorAtEnd(this.noteElement);
+        }
+    }
+
+    redo() {
+        if (this.currentTabIndex === -1) return;
+        const currentTabId = this.tabs[this.currentTabIndex].id;
+        const historyManager = this.tabHistories[currentTabId];
+
+        const nextState = historyManager.redo();
+        if (nextState !== null) {
+            this.noteElement.innerText = nextState;
+            this.updateLineNumbers();
+            this.placeCursorAtEnd(this.noteElement);
         }
     }
 
@@ -284,6 +385,9 @@ class TabManager {
         if (this.scrollHandler) {
             this.noteElement.removeEventListener('scroll', this.scrollHandler);
         }
+        if (this.undoRedoHandler) {
+            document.removeEventListener('keydown', this.undoRedoHandler);
+        }
     }
 }
 
@@ -343,7 +447,6 @@ class TranslationManager {
         this.defaultLanguage = 'en';
         this.sectionManager = sectionManager;
         
-        // Populate the language dropdown dynamically
         this.populateLanguageSelect();
         
         this.loadLanguage();
@@ -381,10 +484,8 @@ class TranslationManager {
             "Yiddish": "yi", "Yoruba": "yo", "Zulu": "zu"
         };
     
-        // Clear existing options
         this.selectElement.innerHTML = '';
     
-        // Add the new options
         for (const [name, code] of Object.entries(languages)) {
             const option = document.createElement('option');
             option.value = code;
@@ -469,7 +570,6 @@ class ApiKeyManager {
   }
 }
 
-// SectionManager Class: Manages content for AI tabs and communication with the API
 class SectionManager {
     constructor() {
         this.currentSectionElement = null;
@@ -540,7 +640,6 @@ class SectionManager {
             return;
         }
         
-        // Use btoa() to create a safe, consistent cache key from the note content
         const cacheKey = `${this.activeSection}-${this.currentNoteId}-${btoa(noteContent)}-${
             this.activeSection === 'translation' ? this.translationManager.getSelectedLanguage() : ''}`;
 
@@ -623,7 +722,7 @@ class SectionManager {
                 }
 
                 this.setContent(this.currentSectionElement, finalResult);
-                this.apiCache[cacheKey] = finalResult; // Use the fixed cacheKey
+                this.apiCache[cacheKey] = finalResult;
                 this.saveSectionContent();
                 return;
             } else if (response.data.attributes.status === 'failed') {
@@ -749,7 +848,6 @@ class NoteApp {
     this.sectionManager.setTranslationManager(this.translationManager);
     this.sectionManager.setApiKeyManager(this.apiKeyManager);
 
-    // Store references to handlers before binding events
     this.inputHandler = () => {
       this.tabManager.saveCurrentTabContent();
       this.lintingManager.updateLineNumbers();
@@ -768,7 +866,6 @@ class NoteApp {
     this.bindEvents();
   }
 
-  // Refactored bindEvents to use the stored handlers
   bindEvents() {
     this.note.addEventListener('input', this.inputHandler);
     this.note.addEventListener('paste', this.pasteHandler);
@@ -786,7 +883,6 @@ class NoteApp {
     document.getElementById('aiWriteButton').addEventListener('click', this.aiWriteClickHandler);
   }
 
-  // New cleanup method
   cleanup() {
     this.note.removeEventListener('input', this.inputHandler);
     this.note.removeEventListener('paste', this.pasteHandler);
@@ -803,7 +899,6 @@ class NoteApp {
 
     document.getElementById('aiWriteButton').removeEventListener('click', this.aiWriteClickHandler);
 
-    // Call cleanup methods for other managers
     this.lintingManager.cleanup();
     this.tabManager.cleanup();
     this.fontManager.stopFontChange();
