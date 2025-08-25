@@ -164,28 +164,44 @@ class TabManager {
         }
 
         const tabToClose = this.tabs[index];
+        const wasActiveTab = (index === this.currentTabIndex);
 
         // Remove the tab and its content from the tabs array and storage
         this.tabs.splice(index, 1);
         StorageManager.removeFromLocalStorage(tabToClose.id);
-        ['summary', 'translation', 'grammar', 'rewriting'].forEach(section => {
+        ['summary', 'translation', 'grammar', 'rewriting', 'keywords'].forEach(section => {
             const key = `${tabToClose.id}-${section}`;
             StorageManager.removeFromLocalStorage(key);
         });
 
         // Update the current tab index after removal
-        if (this.currentTabIndex >= this.tabs.length) {
-            this.currentTabIndex = this.tabs.length - 1;
+        if (wasActiveTab) {
+            // If we closed the active tab, we need to switch to another tab
+            if (index >= this.tabs.length) {
+                // If we closed the last tab, switch to the new last tab
+                this.currentTabIndex = this.tabs.length - 1;
+            } else {
+                // Otherwise, stay at the same index (which now contains the next tab)
+                this.currentTabIndex = index;
+            }
         } else if (index < this.currentTabIndex) {
+            // If we closed a tab before the current one, adjust the index
             this.currentTabIndex -= 1;
         }
+        // If we closed a tab after the current one, currentTabIndex stays the same
 
-        // Crucial: Save the updated tab list to localStorage immediately
+        // Save the updated tab list to localStorage immediately
         this.saveTabsToStorage();
 
-        // Re-render the tabs and switch to the new active tab
+        // Re-render the tabs
         this.renderTabs();
-        this.switchTab(this.currentTabIndex);
+        
+        // If we closed the active tab, switch to the new current tab
+        if (wasActiveTab) {
+            // Force a fresh load of the content
+            this.currentTabIndex = -1; // Reset to force the switchTab to actually switch
+            this.switchTab(index >= this.tabs.length ? this.tabs.length - 1 : index);
+        }
     }
 
     renderTabs() {
