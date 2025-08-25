@@ -1,4 +1,4 @@
-// A simple debounce utility function
+// Global utility functions
 function debounce(func, wait) {
     let timeout;
     return function(...args) {
@@ -8,13 +8,63 @@ function debounce(func, wait) {
     };
 }
 
-// HistoryManager: Manages undo/redo stacks for a single tab's content.
+function throttle(func, limit) {
+    let inThrottle;
+    return function(...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
+// StorageManager Class: Batches localStorage operations
+class StorageManager {
+    static pendingWrites = new Map();
+    static writeTimeout = null;
+
+    static saveToLocalStorage(key, value) {
+        this.pendingWrites.set(key, value);
+        
+        if (this.writeTimeout) {
+            clearTimeout(this.writeTimeout);
+        }
+        
+        this.writeTimeout = setTimeout(() => {
+            this.flushWrites();
+        }, 100);
+    }
+
+    static flushWrites() {
+        this.pendingWrites.forEach((value, key) => {
+            localStorage.setItem(key, value);
+        });
+        this.pendingWrites.clear();
+        this.writeTimeout = null;
+    }
+
+    static getFromLocalStorage(key, defaultValue = '') {
+        if (this.pendingWrites.has(key)) {
+            return this.pendingWrites.get(key);
+        }
+        return localStorage.getItem(key) || defaultValue;
+    }
+
+    static removeFromLocalStorage(key) {
+        this.pendingWrites.delete(key);
+        localStorage.removeItem(key);
+    }
+}
+
+// HistoryManager: Manages undo/redo stacks with a size limit
 class HistoryManager {
     constructor() {
         this.past = [];
         this.future = [];
         this.current = '';
         this.isNavigating = false;
+        this.maxHistorySize = 50; // Limit history size
     }
 
     pushState(newState) {
@@ -22,9 +72,16 @@ class HistoryManager {
             this.isNavigating = false;
             return;
         }
-        if (this.current !== '' && this.current !== newState) {
+        
+        if (this.current !== '' && this.current !== newState && 
+            Math.abs(this.current.length - newState.length) > 5) {
             this.past.push(this.current);
+            
+            if (this.past.length > this.maxHistorySize) {
+                this.past.shift();
+            }
         }
+        
         this.current = newState;
         this.future = [];
     }
@@ -57,7 +114,7 @@ class FontManager {
     this.lineNumbersElement = lineNumbersElement;
     this.fontChangeInterval = null;
 
-    const savedFontSize = localStorage.getItem('fontSize');
+    const savedFontSize = StorageManager.getFromLocalStorage('fontSize');
     if (savedFontSize) {
       this.noteElement.style.fontSize = savedFontSize;
       this.lineNumbersElement.style.fontSize = savedFontSize;
@@ -89,7 +146,7 @@ class FontManager {
   updateFontSize(newSize) {
     this.noteElement.style.fontSize = `${newSize}px`;
     this.lineNumbersElement.style.fontSize = `${newSize}px`;
-    localStorage.setItem('fontSize', `${newSize}px`);
+    StorageManager.saveToLocalStorage('fontSize', `${newSize}px`);
   }
 
   stopFontChange() {
@@ -97,48 +154,39 @@ class FontManager {
   }
 }
 
-// LintingManager Class: Handles various linting tasks like line numbers, highlighting, etc.
+// LintingManager Class: Handles various linting tasks with performance improvements
 class LintingManager {
-  constructor(noteElement, lineNumbersElement) {
-    this.noteElement = noteElement;
-    this.lineNumbersElement = lineNumbersElement;
-    this.scrollHandler = () => {
-      this.lineNumbersElement.scrollTop = this.noteElement.scrollTop;
-    };
-    this.syncScrolling();
-  }
+    constructor(noteElement, lineNumbersElement) {
+        this.noteElement = noteElement;
+        this.lineNumbersElement = lineNumbersElement;
+        this.lineUpdatePending = false;
+        
+        this.scrollHandler = throttle(() => {
+            this.lineNumbersElement.scrollTop = this.noteElement.scrollTop;
+        }, 16); // Throttled to ~60fps
 
-  updateLineNumbers() {
-    const lines = this.noteElement.innerText.split('\n').length;
-    let lineNumberText = '';
-    for (let i = 1; i <= lines; i++) {
-      lineNumberText += i + '\n';
+        this.syncScrolling();
     }
-    this.lineNumbersElement.innerText = lineNumberText;
-  }
 
-  syncScrolling() {
-    this.noteElement.addEventListener('scroll', this.scrollHandler);
-  }
+    updateLineNumbers() {
+        if (this.lineUpdatePending) return;
+        
+        this.lineUpdatePending = true;
+        requestAnimationFrame(() => {
+            const lines = this.noteElement.innerText.split('\n').length;
+            const lineNumbers = Array.from({ length: lines }, (_, i) => i + 1);
+            this.lineNumbersElement.innerText = lineNumbers.join('\n');
+            this.lineUpdatePending = false;
+        });
+    }
 
-  cleanup() {
-    this.noteElement.removeEventListener('scroll', this.scrollHandler);
-  }
-}
+    syncScrolling() {
+        this.noteElement.addEventListener('scroll', this.scrollHandler, { passive: true });
+    }
 
-// StorageManager Class: Handles localStorage operations
-class StorageManager {
-  static saveToLocalStorage(key, value) {
-    localStorage.setItem(key, value);
-  }
-
-  static getFromLocalStorage(key, defaultValue = '') {
-    return localStorage.getItem(key) || defaultValue;
-  }
-  
-  static removeFromLocalStorage(key) {
-      localStorage.removeItem(key);
-  }
+    cleanup() {
+        this.noteElement.removeEventListener('scroll', this.scrollHandler);
+    }
 }
 
 class TabManager {
@@ -155,8 +203,8 @@ class TabManager {
 
         this.addTabBtn.addEventListener('click', () => this.createNewTab());
 
-        this.scrollHandler = () => this.syncScroll();
-        this.noteElement.addEventListener('scroll', this.scrollHandler);
+        this.scrollHandler = throttle(() => this.syncScroll(), 16);
+        this.noteElement.addEventListener('scroll', this.scrollHandler, { passive: true });
         
         this.bindUndoRedo();
 
@@ -308,51 +356,72 @@ class TabManager {
     }
 
     renderTabs() {
-        this.tabContainer.innerHTML = '';
+        const existingTabs = this.tabContainer.querySelectorAll('.tab');
+        
         this.tabs.forEach((tab, index) => {
-            const tabElement = document.createElement('div');
-            tabElement.classList.add('tab');
-
-            const titleSpan = document.createElement('span');
-            titleSpan.textContent = tab.title;
-            titleSpan.classList.add('tab-title');
-
-            titleSpan.ondblclick = (e) => {
-                e.stopPropagation();
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = tab.title;
-                input.className = 'edit-title';
-
-                tabElement.replaceChild(input, titleSpan);
-                input.focus();
-
-                const save = () => {
-                    tab.title = input.value.trim() || 'Untitled';
-                    this.saveTabsToStorage();
-                    this.renderTabs();
-                };
-
-                input.onblur = save;
-                input.onkeydown = (e) => {
-                    if (e.key === 'Enter') input.blur();
-                };
-            };
-
-            const closeBtn = document.createElement('span');
-            closeBtn.textContent = '×';
-            closeBtn.classList.add('close-btn');
-            closeBtn.onclick = (e) => {
-                e.stopPropagation();
-                this.closeTab(index);
-            };
-
-            tabElement.appendChild(titleSpan);
-            tabElement.appendChild(closeBtn);
-            tabElement.addEventListener('click', () => this.switchTab(index));
-            this.tabContainer.appendChild(tabElement);
+            let tabElement = existingTabs[index];
+            
+            if (!tabElement) {
+                tabElement = this.createTabElement(tab, index);
+                this.tabContainer.appendChild(tabElement);
+            } else {
+                const titleSpan = tabElement.querySelector('.tab-title');
+                if (titleSpan && titleSpan.textContent !== tab.title) {
+                    titleSpan.textContent = tab.title;
+                }
+            }
         });
+        
+        while (this.tabContainer.children.length > this.tabs.length) {
+            this.tabContainer.removeChild(this.tabContainer.lastChild);
+        }
+        
         this.highlightActiveTab();
+    }
+    
+    createTabElement(tab, index) {
+        const tabElement = document.createElement('div');
+        tabElement.classList.add('tab');
+
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = tab.title;
+        titleSpan.classList.add('tab-title');
+
+        titleSpan.ondblclick = (e) => {
+            e.stopPropagation();
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = tab.title;
+            input.className = 'edit-title';
+
+            tabElement.replaceChild(input, titleSpan);
+            input.focus();
+
+            const save = () => {
+                tab.title = input.value.trim() || 'Untitled';
+                this.saveTabsToStorage();
+                this.renderTabs();
+            };
+
+            input.onblur = save;
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') input.blur();
+            };
+        };
+
+        const closeBtn = document.createElement('span');
+        closeBtn.textContent = '×';
+        closeBtn.classList.add('close-btn');
+        closeBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.closeTab(index);
+        };
+
+        tabElement.appendChild(titleSpan);
+        tabElement.appendChild(closeBtn);
+        tabElement.addEventListener('click', () => this.switchTab(index));
+        
+        return tabElement;
     }
 
     highlightActiveTab() {
@@ -399,7 +468,7 @@ class TabManager {
 class DarkModeManager {
     constructor(toggleSelector) {
         this.toggle = document.querySelector(toggleSelector);
-        if (localStorage.getItem("darkMode") === "enabled") {
+        if (StorageManager.getFromLocalStorage("darkMode") === "enabled") {
             document.body.classList.add("dark-mode");
             this.toggle.checked = true;
         }
@@ -409,10 +478,10 @@ class DarkModeManager {
     toggleDarkMode() {
         if (this.toggle.checked) {
             document.body.classList.add("dark-mode");
-            localStorage.setItem("darkMode", "enabled");
+            StorageManager.saveToLocalStorage("darkMode", "enabled");
         } else {
             document.body.classList.remove("dark-mode");
-            localStorage.setItem("darkMode", "disabled");
+            StorageManager.saveToLocalStorage("darkMode", "disabled");
         }
     }
 }
@@ -452,7 +521,9 @@ class TranslationManager {
         this.defaultLanguage = 'en';
         this.sectionManager = sectionManager;
         
-        this.populateLanguageSelect();
+        if (this.selectElement.options.length === 0) {
+            this.populateLanguageSelect();
+        }
         
         this.loadLanguage();
         this.bindEvents();
@@ -489,14 +560,15 @@ class TranslationManager {
             "Yiddish": "yi", "Yoruba": "yo", "Zulu": "zu"
         };
     
-        this.selectElement.innerHTML = '';
-    
+        const fragment = document.createDocumentFragment();
+        
         for (const [name, code] of Object.entries(languages)) {
             const option = document.createElement('option');
             option.value = code;
             option.textContent = name;
-            this.selectElement.appendChild(option);
+            fragment.appendChild(option);
         }
+        this.selectElement.appendChild(fragment);
     }
 
     bindEvents() {
@@ -600,6 +672,17 @@ class SectionManager {
             this.handleAiWrite();
         });
     }
+    
+    async generateCacheKey(content) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(content);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        return `${this.activeSection}-${this.currentNoteId}-${hashHex.substring(0, 16)}-${
+            this.activeSection === 'translation' ? this.translationManager.getSelectedLanguage() : ''}`;
+    }
 
     setNoteId(noteId) {
         this.currentNoteId = noteId;
@@ -645,8 +728,7 @@ class SectionManager {
             return;
         }
         
-        const cacheKey = `${this.activeSection}-${this.currentNoteId}-${btoa(noteContent)}-${
-            this.activeSection === 'translation' ? this.translationManager.getSelectedLanguage() : ''}`;
+        const cacheKey = await this.generateCacheKey(noteContent);
 
         if (this.apiCache[cacheKey]) {
             this.setContent(this.currentSectionElement, this.apiCache[cacheKey]);
@@ -855,7 +937,7 @@ class NoteApp {
         this.debouncedInputHandler = debounce(() => {
             this.tabManager.saveCurrentTabContent();
             this.lintingManager.updateLineNumbers();
-        }, 300);
+        }, 500);
 
         this.pasteHandler = (e) => this.handlePaste(e);
         this.dropHandler = (e) => this.handleDrop(e);
