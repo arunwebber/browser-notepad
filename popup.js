@@ -398,9 +398,43 @@ class TabManager {
             input.focus();
 
             const save = () => {
-                tab.title = input.value.trim() || 'Untitled';
+                const newTitle = input.value.trim() || 'Untitled';
+                
+                // Update the tab's title in the data
+                tab.title = newTitle;
                 this.saveTabsToStorage();
-                this.renderTabs();
+
+                // Create a new title span and set its content
+                const newTitleSpan = document.createElement('span');
+                newTitleSpan.textContent = newTitle;
+                newTitleSpan.classList.add('tab-title');
+                
+                // Re-attach the dblclick event listener to the new span
+                newTitleSpan.ondblclick = (e) => {
+                    e.stopPropagation();
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = newTitle;
+                    input.className = 'edit-title';
+
+                    tabElement.replaceChild(input, newTitleSpan);
+                    input.focus();
+                    
+                    const newSave = () => {
+                        const finalNewTitle = input.value.trim() || 'Untitled';
+                        tab.title = finalNewTitle;
+                        this.saveTabsToStorage();
+                        this.renderTabs();
+                    };
+                    
+                    input.onblur = newSave;
+                    input.onkeydown = (e) => {
+                        if (e.key === 'Enter') input.blur();
+                    };
+                };
+
+                // Replace the input with the new span
+                tabElement.replaceChild(newTitleSpan, input);
             };
 
             input.onblur = save;
