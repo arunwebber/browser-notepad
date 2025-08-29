@@ -913,6 +913,41 @@ class SectionManager {
     }
 }
 
+// UploadManager Class: Handles file uploads
+class UploadManager {
+    constructor(noteElement, uploadBtnId) {
+        this.noteElement = noteElement;
+        this.uploadBtn = document.getElementById(uploadBtnId);
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        this.uploadBtn.addEventListener('click', () => this.triggerUpload());
+    }
+
+    triggerUpload() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.txt'; // Restrict to text files
+        input.onchange = (e) => this.handleFileSelect(e);
+        input.click();
+    }
+
+    handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const content = e.target.result;
+            this.noteElement.innerText = content;
+            // You may want to trigger a save or update here if needed.
+            // For example, this.tabManager.saveCurrentTabContent();
+        };
+        reader.readAsText(file);
+    }
+}
+
 class NoteApp {
     constructor() {
         this.note = document.getElementById('note');
@@ -930,6 +965,7 @@ class NoteApp {
         this.aiTabs = new AiTabs(".rightTab", ".rightTabContent", this.sectionManager);
         this.translationManager = new TranslationManager(this.sectionManager);
         this.apiKeyManager = new ApiKeyManager();
+        this.uploadManager = new UploadManager(this.note, 'uploadBtn');
 
         this.sectionManager.setTranslationManager(this.translationManager);
         this.sectionManager.setApiKeyManager(this.apiKeyManager);

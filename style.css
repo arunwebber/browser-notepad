@@ -633,3 +633,32 @@ body.dark-mode #apiKeyInput {
   background-color: #ccc;
   color: #333;
 }
+#uploadBtn {
+  cursor: pointer;
+  touch-action: manipulation;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 16px;
+  border: 1px solid var(--primary-color);
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, transform 0.1s;
+}
+
+#uploadBtn:hover {
+  background-color: #0069d9;
+  border-color: #0069d9;
+  transform: translateY(-1px);
+}
+
+body.dark-mode #uploadBtn {
+  background-color: var(--element-bg-dark);
+  border-color: var(--border-dark);
+  color: var(--text-dark);
+}
+
+body.dark-mode #uploadBtn:hover {
+  background-color: #3e3e40;
+}
